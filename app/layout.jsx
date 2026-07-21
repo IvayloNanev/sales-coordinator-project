@@ -7,7 +7,7 @@ export async function generateMetadata() {
   const protocol = requestHeaders.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
   const imageUrl = `${protocol}://${host}/og.png`;
   const title = "Sales Report Assistant";
-  const description = "Consolidate, validate, approve, and print manager-ready weekly sales reports.";
+  const description = "Consolidate, validate, and print manager-ready weekly sales reports.";
   return {
     title,
     description,

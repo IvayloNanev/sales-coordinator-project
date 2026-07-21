@@ -1,7 +1,11 @@
-const steps = ["Upload", "Validate", "Approve", "Report"];
+const steps = [
+  { label: "Upload", value: "setup" },
+  { label: "Validate", value: "validation" },
+  { label: "Report", value: "report" },
+];
 
-export default function ProgressHeader({ currentStep }) {
-  const activeIndex = Math.max(0, ["setup", "validation", "approval", "report"].indexOf(currentStep));
+export default function ProgressHeader({ currentStep, onNavigate }) {
+  const activeIndex = Math.max(0, ["setup", "validation", "report"].indexOf(currentStep));
   return (
     <header className="app-header no-print">
       <a className="brand" href="#main" aria-label="Sales Report Assistant home">
@@ -10,8 +14,10 @@ export default function ProgressHeader({ currentStep }) {
       </a>
       <ol className="progress" aria-label="Report progress">
         {steps.map((step, index) => (
-          <li className={index <= activeIndex ? "active" : ""} aria-current={index === activeIndex ? "step" : undefined} key={step}>
-            <span>{index + 1}</span>{step}
+          <li className={index <= activeIndex ? "active" : ""} key={step.value}>
+            <button type="button" aria-current={index === activeIndex ? "step" : undefined} onClick={() => onNavigate(step.value)}>
+              <span>{index + 1}</span>{step.label}
+            </button>
           </li>
         ))}
       </ol>

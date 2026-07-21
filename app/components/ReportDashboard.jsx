@@ -6,7 +6,7 @@ function DataTable({ title, columns, rows }) {
   return <section className="report-table"><h2>{title}</h2><div className="table-wrap"><table><thead><tr>{columns.map((column) => <th key={column.key}>{column.label}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={`${title}-${index}`}>{columns.map((column) => <td key={column.key}>{column.render ? column.render(row[column.key]) : row[column.key]}</td>)}</tr>)}</tbody></table></div></section>;
 }
 
-export default function ReportDashboard({ report, startDate, endDate, generatedDate, reportApproved, onApprove, onPrint, onRestart }) {
+export default function ReportDashboard({ report, startDate, endDate, generatedDate, onDownload, onRestart }) {
   const money = (value) => formatCurrency(value);
   return (
     <section className="report-shell" aria-labelledby="report-title">
@@ -32,7 +32,7 @@ export default function ReportDashboard({ report, startDate, endDate, generatedD
         <DataTable title="Sales by product category" rows={report.categories} columns={[{ key: "productCategory", label: "Product category" }, { key: "units", label: "Units sold" }, { key: "revenue", label: "Revenue", render: money }]} />
         <DataTable title="Top products" rows={report.topProducts} columns={[{ key: "product", label: "Product" }, { key: "productCategory", label: "Product category" }, { key: "units", label: "Units sold" }, { key: "revenue", label: "Revenue", render: money }]} />
       </div>
-      <section className="report-approval panel no-print"><label><input type="checkbox" checked={reportApproved} onChange={(event) => onApprove(event.target.checked)} /><span><strong>I have reviewed and approved this report</strong><small>Approval is required before printing or saving as a PDF.</small></span></label><div><button className="button secondary" onClick={onRestart}>Start New Report</button><button className="button primary" disabled={!reportApproved} onClick={onPrint}>Print or Save as PDF</button></div></section>
+      <section className="report-actions panel no-print"><div><strong>Report ready</strong><small>Download the cleaned source data or start another report.</small></div><div><button className="button secondary" onClick={onRestart}>Start New Report</button><button className="button primary" onClick={onDownload}>Download Cleaned CSV</button></div></section>
     </section>
   );
 }

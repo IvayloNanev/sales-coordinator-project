@@ -1,10 +1,9 @@
 import { useState } from "react";
 
-export default function ReportSetup({ startDate, endDate, files, onDates, onFiles, onRemove, onValidate }) {
+export default function ReportSetup({ startDate, endDate, files, onDates, onFiles, onRemove }) {
   const [fileNotice, setFileNotice] = useState("");
   const periodReady = Boolean(startDate && endDate && startDate <= endDate);
   const filesReady = files.length > 0;
-  const ready = periodReady && filesReady;
   const addSelectedFiles = (incoming) => {
     const csvFiles = incoming.filter((file) => file.name.toLowerCase().endsWith(".csv"));
     onFiles(csvFiles);
@@ -22,7 +21,7 @@ export default function ReportSetup({ startDate, endDate, files, onDates, onFile
   };
   return (
     <section className="screen" aria-labelledby="setup-title">
-      <div className="screen-heading"><p className="eyebrow">Step 1 of 4</p><h1 id="setup-title">Set up the weekly report</h1><p>Choose the reporting period and add one CSV file for each store.</p></div>
+      <div className="screen-heading"><p className="eyebrow">Step 1 of 3</p><h1 id="setup-title">Set up the weekly report</h1><p>Choose the reporting period and add one CSV file for each store.</p></div>
       <div className="setup-grid">
         <div className="panel form-panel">
           <div className="section-title"><div><h2>Reporting period <span className="required-badge">Required</span></h2><p>Select both dates before store data can be validated.</p></div></div>
@@ -48,8 +47,7 @@ export default function ReportSetup({ startDate, endDate, files, onDates, onFile
             <p className={periodReady ? "complete" : "incomplete"}><span aria-hidden="true">{periodReady ? "✓" : "1"}</span><strong>Reporting period</strong><small>{periodReady ? `${startDate} to ${endDate}` : "Select a start date and end date"}</small></p>
             <p className={filesReady ? "complete" : "incomplete"}><span aria-hidden="true">{filesReady ? "✓" : "2"}</span><strong>Store CSV files</strong><small>{filesReady ? `${files.length} ${files.length === 1 ? "file" : "files"} ready` : "Upload at least one CSV file"}</small></p>
           </div>
-          <button className="button primary full" disabled={!ready} onClick={onValidate}>Validate Store Data <span aria-hidden="true">→</span></button>
-          {!ready && <p className="disabled-hint">Complete the unchecked requirement above to enable validation.</p>}
+          <p className="menu-hint">When both requirements are complete, choose <strong>Validate</strong> or <strong>Report</strong> from the menu above.</p>
         </aside>
       </div>
     </section>
