@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import ProgressHeader from "./components/ProgressHeader";
-import WelcomeScreen from "./components/WelcomeScreen";
 import ReportSetup from "./components/ReportSetup";
 import ValidationResults from "./components/ValidationResults";
 import DataApproval from "./components/DataApproval";
@@ -12,7 +11,7 @@ import { calculateReport, parseCsvFile, recordsToCsv, validateRecords } from "..
 const initialState = { startDate: "", endDate: "", files: [] };
 
 export default function Home() {
-  const [step, setStep] = useState("welcome");
+  const [step, setStep] = useState("setup");
   const [setup, setSetup] = useState(initialState);
   const [validation, setValidation] = useState(null);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -67,7 +66,6 @@ export default function Home() {
     <div className="app-shell">
       <ProgressHeader currentStep={step} />
       <main id="main" className={step === "report" ? "report-main" : "main-content"}>
-        {step === "welcome" && <WelcomeScreen onStart={() => setStep("setup")} />}
         {step === "setup" && <ReportSetup {...setup} onDates={(key, value) => setSetup((current) => ({ ...current, [key]: value }))} onFiles={addFiles} onRemove={(file) => setSetup((current) => ({ ...current, files: current.files.filter((item) => item !== file) }))} onValidate={runValidation} />}
         {step === "validation" && validation && <ValidationResults fileCount={setup.files.length} totalRecords={totalRecords} results={validation} onContinue={() => setStep("approval")} onReturn={() => setStep("setup")} />}
         {step === "approval" && <DataApproval report={report} startDate={setup.startDate} endDate={setup.endDate} approved={dataApproved} onApprove={setDataApproved} onDownload={downloadCleanedData} onGenerate={() => { setGeneratedDate(new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date())); setStep("report"); }} onReturn={() => setStep("validation")} />}

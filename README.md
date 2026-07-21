@@ -49,12 +49,11 @@ After invalid rows are excluded, the verified sample report contains 25 orders, 
 
 ## Workflow
 
-1. Start a weekly report.
-2. Select the reporting period and upload one or more CSV files.
-3. Review validation issues and either replace files or exclude invalid rows.
-4. Download the cleaned CSV when a corrected working file is useful, then approve the cleaned dataset.
-5. Review and approve the generated report.
-6. Use the browser print dialog to print or save the report as a PDF.
+1. Select the reporting period and upload one or more CSV files.
+2. Review validation issues and either replace files or exclude invalid rows.
+3. Download the cleaned CSV when a corrected working file is useful, then approve the cleaned dataset.
+4. Review and approve the generated report.
+5. Use the browser print dialog to print or save the report as a PDF.
 
 ## MVP boundaries
 
