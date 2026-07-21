@@ -27,43 +27,50 @@ export default function ReportSetup({ startDate, endDate, files, onDates, onFile
     addSelectedFiles([...event.dataTransfer.files]);
   };
   return (
-    <section className="screen" aria-labelledby="setup-title">
-      <div className="screen-heading"><p className="eyebrow">Step 1 of 3</p><h1 id="setup-title">Set up the weekly report</h1><p>Choose the reporting period and add one CSV file for each store.</p></div>
+    <div className="screen">
       <div className="setup-grid">
         <div className="panel form-panel">
-          <div className="section-title"><div><h2>Reporting period <span className="required-badge">Required</span></h2><p>Select both dates before store data can be validated.</p></div></div>
-          <div className="date-grid">
-            <label>Start date<input type="date" value={startDate} max={endDate || undefined} onChange={(event) => onDates("startDate", event.target.value)} /></label>
-            <label>End date<input type="date" value={endDate} min={startDate || undefined} onChange={(event) => onDates("endDate", event.target.value)} /></label>
-          </div>
-          <h2>Store files</h2>
-          <label
-            className={`drop-zone${isDragging ? " dragging" : ""}${filesReady ? " has-files" : ""}`}
-            onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }}
-            onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; setIsDragging(true); }}
-            onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setIsDragging(false); }}
-            onDrop={handleDrop}
-          >
-            <span className="upload-icon" aria-hidden="true">{filesReady ? "✓" : "⇧"}</span>
-            <strong>{isDragging ? "Drop CSV files here" : files.length === 1 ? files[0].name : files.length > 1 ? `${files.length} CSV files selected` : "Choose or drop CSV files"}</strong>
-            <span>{filesReady ? "Drop more files here or click to browse" : "Upload multiple store files at once"}</span>
-            <input type="file" accept=".csv,text/csv" multiple onChange={(event) => addSelectedFiles([...event.target.files])} />
-          </label>
-          {fileNotice && <div className={`file-notice ${filesReady ? "success" : "warning"}`} role="status"><span aria-hidden="true">{filesReady ? "✓" : "!"}</span>{fileNotice}</div>}
-          <p className="helper">Required columns: Date, Store ID, Store name, Order number, Customer name, Product, Product category, Sales region, Quantity sold, Revenue.</p>
-          <div className="sample-callout"><div><strong>Need test data?</strong><p>Use the three included store files to preview the full workflow.</p></div><div className="sample-actions"><button type="button" onClick={loadSamples}>Use all 3 samples</button><div className="sample-links" aria-label="Download individual sample files"><a href="/sample-files/store-101.csv" download>101</a><a href="/sample-files/store-102.csv" download>102</a><a href="/sample-files/store-103.csv" download>103</a></div></div></div>
+          <section className="setup-block" aria-labelledby="period-title">
+            <div className="setup-block-heading"><span className="workflow-number">1</span><div><h2 id="period-title">Choose reporting period <span className="required-badge">Required</span></h2><p>Select the date range covered by the store files.</p></div></div>
+            <div className="date-grid">
+              <label>Start date<input type="date" value={startDate} max={endDate || undefined} onChange={(event) => onDates("startDate", event.target.value)} /></label>
+              <label>End date<input type="date" value={endDate} min={startDate || undefined} onChange={(event) => onDates("endDate", event.target.value)} /></label>
+            </div>
+          </section>
+          <section className="setup-block upload-block" aria-labelledby="files-title">
+            <div className="setup-block-heading"><span className="workflow-number">2</span><div><h2 id="files-title">Add store files</h2><p>Use one CSV per store. You can add several files at once.</p></div></div>
+            <label
+              className={`drop-zone${isDragging ? " dragging" : ""}${filesReady ? " has-files" : ""}`}
+              onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }}
+              onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; setIsDragging(true); }}
+              onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setIsDragging(false); }}
+              onDrop={handleDrop}
+            >
+              <span className="upload-icon" aria-hidden="true">{filesReady ? "✓" : "⇧"}</span>
+              <strong>{isDragging ? "Drop CSV files here" : files.length === 1 ? files[0].name : files.length > 1 ? `${files.length} CSV files selected` : "Choose or drop CSV files"}</strong>
+              <span>{filesReady ? "Drop more files here or click to browse" : "Upload multiple store files at once"}</span>
+              <input type="file" accept=".csv,text/csv" multiple onChange={(event) => { addSelectedFiles([...event.target.files]); event.currentTarget.value = ""; }} />
+            </label>
+            {fileNotice && <div className={`file-notice ${filesReady ? "success" : "warning"}`} role="status"><span aria-hidden="true">{filesReady ? "✓" : "!"}</span>{fileNotice}</div>}
+            <p className="helper">Required columns: Date, Store ID, Store name, Order number, Customer name, Product, Product category, Sales region, Quantity sold, Revenue.</p>
+            <div className="sample-callout"><div><strong>Need test data?</strong><p>Use the included store files to preview the workflow.</p></div><div className="sample-actions"><button type="button" onClick={loadSamples}>Use all 3 samples</button><div className="sample-links" aria-label="Download individual sample files"><a href="/sample-files/store-101.csv" download>101</a><a href="/sample-files/store-102.csv" download>102</a><a href="/sample-files/store-103.csv" download>103</a></div></div></div>
+          </section>
         </div>
         <aside className="panel file-panel" aria-labelledby="selected-files-title">
-          <div className="panel-title"><h2 id="selected-files-title">Selected files</h2><span className="count-badge">{files.length}</span></div>
-          {files.length ? <ul className="file-list">{files.map((file) => <li key={`${file.name}-${file.lastModified}`}><span className="file-type">CSV</span><div><strong>{file.name}</strong><small>{Math.max(1, Math.round(file.size / 1024))} KB</small></div><button aria-label={`Remove ${file.name}`} onClick={() => onRemove(file)}>×</button></li>)}</ul> : <div className="empty-state"><span aria-hidden="true">▤</span><p>No files selected yet.</p></div>}
-          <div className="validation-checklist" aria-label="Requirements to validate data">
-            <p className={periodReady ? "complete" : "incomplete"}><span aria-hidden="true">{periodReady ? "✓" : "1"}</span><strong>Reporting period</strong><small>{periodReady ? `${startDate} to ${endDate}` : "Select a start date and end date"}</small></p>
-            <p className={filesReady ? "complete" : "incomplete"}><span aria-hidden="true">{filesReady ? "✓" : "2"}</span><strong>Store CSV files</strong><small>{filesReady ? `${files.length} ${files.length === 1 ? "file" : "files"} ready` : "Upload at least one CSV file"}</small></p>
+          <div className="file-review">
+            <div className="panel-title"><span className="workflow-number">3</span><div><h2 id="selected-files-title">Review selected files</h2><p>Confirm the files below before validation.</p></div><span className="count-badge">{files.length}</span></div>
+            {files.length ? <ul className="file-list">{files.map((file) => <li key={`${file.name}-${file.lastModified}`}><span className="file-type">CSV</span><div><strong>{file.name}</strong><small>{Math.max(1, Math.round(file.size / 1024))} KB</small></div><button aria-label={`Remove ${file.name}`} onClick={() => onRemove(file)}>×</button></li>)}</ul> : <div className="empty-state"><span aria-hidden="true">▤</span><p>Files you add will appear here.</p></div>}
           </div>
-          <button className="button primary full" disabled={!ready} onClick={onValidate}>Validate Store Data <span aria-hidden="true">→</span></button>
-          {!ready && <p className="disabled-hint">Complete the unchecked requirement above to enable validation.</p>}
+          <div className="validation-summary">
+            <div className="validation-checklist" aria-label="Requirements to validate data">
+              <p className={periodReady ? "complete" : "incomplete"}><span aria-hidden="true">{periodReady ? "✓" : "1"}</span><strong>Reporting period</strong><small>{periodReady ? `${startDate} to ${endDate}` : "Select a start date and end date"}</small></p>
+              <p className={filesReady ? "complete" : "incomplete"}><span aria-hidden="true">{filesReady ? "✓" : "2"}</span><strong>Store CSV files</strong><small>{filesReady ? `${files.length} ${files.length === 1 ? "file" : "files"} ready` : "Upload at least one CSV file"}</small></p>
+            </div>
+            <button className="button primary full" disabled={!ready} onClick={onValidate}>Validate data <span aria-hidden="true">→</span></button>
+            {!ready && <p className="disabled-hint">Complete both steps above to continue.</p>}
+          </div>
         </aside>
       </div>
-    </section>
+    </div>
   );
 }
