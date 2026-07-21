@@ -2,6 +2,7 @@ import { useState } from "react";
 
 export default function ReportSetup({ startDate, endDate, files, onDates, onFiles, onRemove }) {
   const [fileNotice, setFileNotice] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
   const periodReady = Boolean(startDate && endDate && startDate <= endDate);
   const filesReady = files.length > 0;
   const addSelectedFiles = (incoming) => {
@@ -19,6 +20,11 @@ export default function ReportSetup({ startDate, endDate, files, onDates, onFile
     onDates("endDate", "2026-07-10");
     addSelectedFiles(sampleFiles);
   };
+  const handleDrop = (event) => {
+    event.preventDefault();
+    setIsDragging(false);
+    addSelectedFiles([...event.dataTransfer.files]);
+  };
   return (
     <section className="screen" aria-labelledby="setup-title">
       <div className="screen-heading"><p className="eyebrow">Step 1 of 3</p><h1 id="setup-title">Set up the weekly report</h1><p>Choose the reporting period and add one CSV file for each store.</p></div>
@@ -30,10 +36,16 @@ export default function ReportSetup({ startDate, endDate, files, onDates, onFile
             <label>End date<input type="date" value={endDate} min={startDate || undefined} onChange={(event) => onDates("endDate", event.target.value)} /></label>
           </div>
           <h2>Store files</h2>
-          <label className="drop-zone">
-            <span className="upload-icon" aria-hidden="true">⇧</span>
-            <strong>Choose CSV files</strong>
-            <span>Upload multiple store files at once</span>
+          <label
+            className={`drop-zone${isDragging ? " dragging" : ""}${filesReady ? " has-files" : ""}`}
+            onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }}
+            onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; setIsDragging(true); }}
+            onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setIsDragging(false); }}
+            onDrop={handleDrop}
+          >
+            <span className="upload-icon" aria-hidden="true">{filesReady ? "✓" : "⇧"}</span>
+            <strong>{isDragging ? "Drop CSV files here" : files.length === 1 ? files[0].name : files.length > 1 ? `${files.length} CSV files selected` : "Choose or drop CSV files"}</strong>
+            <span>{filesReady ? "Drop more files here or click to browse" : "Upload multiple store files at once"}</span>
             <input type="file" accept=".csv,text/csv" multiple onChange={(event) => addSelectedFiles([...event.target.files])} />
           </label>
           {fileNotice && <div className={`file-notice ${filesReady ? "success" : "warning"}`} role="status"><span aria-hidden="true">{filesReady ? "✓" : "!"}</span>{fileNotice}</div>}
