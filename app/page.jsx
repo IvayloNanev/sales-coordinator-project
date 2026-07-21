@@ -5,7 +5,7 @@ import ProgressHeader from "./components/ProgressHeader";
 import ReportSetup from "./components/ReportSetup";
 import ValidationResults from "./components/ValidationResults";
 import ReportDashboard from "./components/ReportDashboard";
-import { calculateReport, parseCsvFile, recordsToCsv, validateRecords } from "../lib/sales";
+import { calculateReport, getDateRange, parseCsvFile, recordsToCsv, validateRecords } from "../lib/sales";
 
 const initialState = { startDate: "", endDate: "", files: [] };
 
@@ -25,13 +25,19 @@ export default function Home() {
     setReportReady(false);
   };
 
-  const addFiles = (incoming) => {
+  const getRangeFromFiles = async (files) => {
+    if (!files.length) return null;
+    const parsed = await Promise.all(files.map(parseCsvFile));
+    return getDateRange(parsed.flatMap((file) => file.records));
+  };
+
+  const addFiles = async (incoming) => {
     const csvFiles = incoming.filter((file) => file.name.toLowerCase().endsWith(".csv"));
-    setSetup((current) => ({
-      ...current,
-      files: [...current.files, ...csvFiles.filter((file) => !current.files.some((existing) => existing.name === file.name && existing.size === file.size))],
-    }));
+    const files = [...setup.files, ...csvFiles.filter((file) => !setup.files.some((existing) => existing.name === file.name && existing.size === file.size))];
+    const range = await getRangeFromFiles(files);
+    setSetup((current) => ({ ...current, files, ...(range ?? {}) }));
     resetResults();
+    return range;
   };
 
   const updateDate = (key, value) => {
@@ -39,8 +45,10 @@ export default function Home() {
     resetResults();
   };
 
-  const removeFile = (file) => {
-    setSetup((current) => ({ ...current, files: current.files.filter((item) => item !== file) }));
+  const removeFile = async (file) => {
+    const files = setup.files.filter((item) => item !== file);
+    const range = await getRangeFromFiles(files);
+    setSetup((current) => ({ ...current, files, startDate: range?.startDate ?? "", endDate: range?.endDate ?? "" }));
     resetResults();
   };
 

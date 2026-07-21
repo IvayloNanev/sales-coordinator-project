@@ -6,10 +6,14 @@ export default function ReportSetup({ startDate, endDate, files, onDates, onFile
   const periodReady = Boolean(startDate && endDate && startDate <= endDate);
   const filesReady = files.length > 0;
   const ready = periodReady && filesReady;
-  const addSelectedFiles = (incoming) => {
+  const addSelectedFiles = async (incoming) => {
     const csvFiles = incoming.filter((file) => file.name.toLowerCase().endsWith(".csv"));
-    onFiles(csvFiles);
-    setFileNotice(csvFiles.length ? `${csvFiles.length} CSV ${csvFiles.length === 1 ? "file" : "files"} added successfully.` : "No CSV files were added. Please choose files ending in .csv.");
+    const range = csvFiles.length ? await onFiles(csvFiles) : null;
+    setFileNotice(csvFiles.length
+      ? range
+        ? `${csvFiles.length} CSV ${csvFiles.length === 1 ? "file" : "files"} added. Reporting period set to ${range.startDate} through ${range.endDate}.`
+        : `${csvFiles.length} CSV ${csvFiles.length === 1 ? "file" : "files"} added. No valid dates were found, so enter the reporting period manually.`
+      : "No CSV files were added. Please choose files ending in .csv.");
   };
   const loadSamples = async () => {
     const names = ["store-101.csv", "store-102.csv", "store-103.csv"];
@@ -17,9 +21,7 @@ export default function ReportSetup({ startDate, endDate, files, onDates, onFile
       const response = await fetch(`/sample-files/${name}`);
       return new File([await response.blob()], name, { type: "text/csv" });
     }));
-    onDates("startDate", "2026-07-06");
-    onDates("endDate", "2026-07-10");
-    addSelectedFiles(sampleFiles);
+    await addSelectedFiles(sampleFiles);
   };
   const handleDrop = (event) => {
     event.preventDefault();
@@ -31,7 +33,7 @@ export default function ReportSetup({ startDate, endDate, files, onDates, onFile
       <div className="setup-grid">
         <div className="panel form-panel">
           <section className="setup-block" aria-labelledby="period-title">
-            <div className="setup-block-heading"><span className="workflow-number">1</span><div><h2 id="period-title">Choose reporting period <span className="required-badge">Required</span></h2><p>Select the date range covered by the store files.</p></div></div>
+            <div className="setup-block-heading"><span className="workflow-number">1</span><div><h2 id="period-title">Reporting period <span className="required-badge">Required</span></h2><p>Dates are detected from your files automatically. Adjust them here if needed.</p></div></div>
             <div className="date-grid">
               <label>Start date<input type="date" value={startDate} max={endDate || undefined} onChange={(event) => onDates("startDate", event.target.value)} /></label>
               <label>End date<input type="date" value={endDate} min={startDate || undefined} onChange={(event) => onDates("endDate", event.target.value)} /></label>
