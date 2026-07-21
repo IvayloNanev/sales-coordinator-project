@@ -32,15 +32,8 @@ export default function ReportSetup({ startDate, endDate, files, onDates, onFile
     <div className="screen">
       <div className="setup-grid">
         <div className="panel form-panel">
-          <section className="setup-block" aria-labelledby="period-title">
-            <div className="setup-block-heading"><span className="workflow-number">1</span><div><h2 id="period-title">Reporting period <span className="required-badge">Required</span></h2><p>Dates are detected from your files automatically. Adjust them here if needed.</p></div></div>
-            <div className="date-grid">
-              <label>Start date<input type="date" value={startDate} max={endDate || undefined} onChange={(event) => onDates("startDate", event.target.value)} /></label>
-              <label>End date<input type="date" value={endDate} min={startDate || undefined} onChange={(event) => onDates("endDate", event.target.value)} /></label>
-            </div>
-          </section>
           <section className="setup-block upload-block" aria-labelledby="files-title">
-            <div className="setup-block-heading"><span className="workflow-number">2</span><div><h2 id="files-title">Add store files</h2><p>Use one CSV per store. You can add several files at once.</p></div></div>
+            <div className="setup-block-heading"><span className="workflow-number">1</span><div><h2 id="files-title">Add store files</h2><p>Drop your CSVs first. The reporting period will be detected from their Date column.</p></div></div>
             <label
               className={`drop-zone${isDragging ? " dragging" : ""}${filesReady ? " has-files" : ""}`}
               onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }}
@@ -60,13 +53,24 @@ export default function ReportSetup({ startDate, endDate, files, onDates, onFile
         </div>
         <aside className="panel file-panel" aria-labelledby="selected-files-title">
           <div className="file-review">
-            <div className="panel-title"><span className="workflow-number">3</span><div><h2 id="selected-files-title">Review selected files</h2><p>Confirm the files below before validation.</p></div><span className="count-badge">{files.length}</span></div>
+            <div className="panel-title"><span className="workflow-number">2</span><div><h2 id="selected-files-title">Review selected files</h2><p>Confirm the files and detected period before validation.</p></div><span className="count-badge">{files.length}</span></div>
             {files.length ? <ul className="file-list">{files.map((file) => <li key={`${file.name}-${file.lastModified}`}><span className="file-type">CSV</span><div><strong>{file.name}</strong><small>{Math.max(1, Math.round(file.size / 1024))} KB</small></div><button aria-label={`Remove ${file.name}`} onClick={() => onRemove(file)}>×</button></li>)}</ul> : <div className="empty-state"><span aria-hidden="true">▤</span><p>Files you add will appear here.</p></div>}
           </div>
           <div className="validation-summary">
+            <div className={`detected-period${periodReady ? " ready" : ""}`}>
+              <span className="period-icon" aria-hidden="true">{periodReady ? "✓" : "—"}</span>
+              <div><small>Detected reporting period</small><strong>{periodReady ? `${startDate} — ${endDate}` : filesReady ? "No valid dates found" : "Waiting for files"}</strong></div>
+            </div>
+            <details className="date-adjuster" open={filesReady && !periodReady}>
+              <summary>{periodReady ? "Adjust dates manually" : "Enter dates manually"}</summary>
+              <div className="date-grid">
+                <label>Start date<input type="date" value={startDate} max={endDate || undefined} onChange={(event) => onDates("startDate", event.target.value)} /></label>
+                <label>End date<input type="date" value={endDate} min={startDate || undefined} onChange={(event) => onDates("endDate", event.target.value)} /></label>
+              </div>
+            </details>
             <div className="validation-checklist" aria-label="Requirements to validate data">
-              <p className={periodReady ? "complete" : "incomplete"}><span aria-hidden="true">{periodReady ? "✓" : "1"}</span><strong>Reporting period</strong><small>{periodReady ? `${startDate} to ${endDate}` : "Select a start date and end date"}</small></p>
-              <p className={filesReady ? "complete" : "incomplete"}><span aria-hidden="true">{filesReady ? "✓" : "2"}</span><strong>Store CSV files</strong><small>{filesReady ? `${files.length} ${files.length === 1 ? "file" : "files"} ready` : "Upload at least one CSV file"}</small></p>
+              <p className={filesReady ? "complete" : "incomplete"}><span aria-hidden="true">{filesReady ? "✓" : "1"}</span><strong>Store CSV files</strong><small>{filesReady ? `${files.length} ${files.length === 1 ? "file" : "files"} ready` : "Upload at least one CSV file"}</small></p>
+              <p className={periodReady ? "complete" : "incomplete"}><span aria-hidden="true">{periodReady ? "✓" : "2"}</span><strong>Reporting period</strong><small>{periodReady ? "Detected and ready" : "Valid dates are required"}</small></p>
             </div>
             <button className="button primary full" disabled={!ready} onClick={onValidate}>Validate data <span aria-hidden="true">→</span></button>
             {!ready && <p className="disabled-hint">Complete both steps above to continue.</p>}

@@ -108,7 +108,7 @@ export default function Home() {
             {validation ? (
               <ValidationResults fileCount={setup.files.length} totalRecords={totalRecords} results={validation} onContinue={generateReport} onReturn={() => scrollTo("upload")} />
             ) : (
-              <div className="locked-card"><span aria-hidden="true">02</span><div><strong>Validation appears here</strong><p>Add your dates and store files above, then select “Validate data.”</p></div></div>
+              <div className="locked-card"><span aria-hidden="true">02</span><div><strong>Validation appears here</strong><p>Add your store files above, then select “Validate data.”</p></div></div>
             )}
           </section>
 
