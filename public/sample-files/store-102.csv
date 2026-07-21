@@ -1,0 +1,11 @@
+Date,Store ID,Store name,Order number,Customer name,Product,Product category,Sales region,Quantity sold,Revenue
+2026-07-06,102,Riverside,102-001,Harbor Studio,Standing Desk,Furniture,Southeast,2,1800
+2026-07-06,102,Riverside,102-002,Atlas Health,Ergonomic Chair,Furniture,Southeast,3,1800
+2026-07-07,102,Riverside,102-003,Cedar Finance,Desk Lamp,Lighting,Southeast,4,360
+2026-07-07,102,Riverside,DUP-500,Pioneer Foods,Monitor 27,Electronics,Southeast,1,350
+2026-07-08,102,Riverside,102-005,Sunrise Legal,Mechanical Keyboard,Accessories,Southeast,5,400
+2026-07-08,102,Riverside,102-006,Redwood Partners,Wireless Headset,Electronics,Southeast,4,480
+2026-07-09,102,Riverside,102-007,Beacon Market,Wireless Mouse,Accessories,Southeast,10,300
+2026-07-09,102,Riverside,102-008,Orchard Systems,File Cabinet,Furniture,Southeast,1,400
+2026-07-10,102,Riverside,102-009,Summit Dental,Ergonomic Chair,Furniture,Southeast,2,1200
+2026-07-10,102,Riverside,102-010,Willow Creative,Webcam,Electronics,Southeast,not-a-number,200

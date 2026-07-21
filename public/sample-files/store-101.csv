@@ -1,0 +1,11 @@
+Date,Store ID,Store name,Order number,Customer name,Product,Product category,Sales region,Quantity sold,Revenue
+2026-07-06,101,Downtown,101-001,Acme Design,Ergonomic Chair,Furniture,Northeast,2,1200
+2026-07-06,101,Downtown,101-002,Northstar Labs,Desk Lamp,Lighting,Northeast,5,450
+2026-07-07,101,Downtown,101-003,Bright Path,Standing Desk,Furniture,Northeast,1,900
+2026-07-07,101,Downtown,DUP-500,Clearwater Co,Wireless Headset,Electronics,Northeast,3,360
+2026-07-08,101,Downtown,101-005,Meridian Group,Monitor 27,Electronics,Northeast,2,700
+2026-07-09,101,Downtown,101-006,Lakeview LLC,Mechanical Keyboard,Accessories,Northeast,4,320
+2026-07-09,101,Downtown,101-007,Juniper Works,Ergonomic Chair,Furniture,Northeast,1,600
+2026-07-10,101,Downtown,101-008,Oak & Main,Desk Lamp,Lighting,Northeast,6,540
+2026-07-10,101,Downtown,101-009,Fairview Media,Wireless Mouse,Accessories,Northeast,8,240
+2026-07-10,101,Downtown,101-010,Stonebridge,File Cabinet,Furniture,Northeast,2,800

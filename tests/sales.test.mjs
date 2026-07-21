@@ -1,0 +1,70 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+import { calculateReport, groupByRegion, groupByStore, parseCsvText, validateRecords } from "../lib/sales.js";
+
+const validFixture = [
+  { storeId: "101", storeName: "Downtown", orderNumber: "A-1", product: "Desk", productCategory: "Furniture", salesRegion: "North", quantitySold: 2, revenue: 800 },
+  { storeId: "102", storeName: "Riverside", orderNumber: "A-2", product: "Chair", productCategory: "Furniture", salesRegion: "South", quantitySold: 3, revenue: 600 },
+  { storeId: "101", storeName: "Downtown", orderNumber: "A-3", product: "Chair", productCategory: "Furniture", salesRegion: "North", quantitySold: 1, revenue: 200 },
+];
+
+test("calculates revenue, unique orders, units, and average order value", () => {
+  const report = calculateReport(validFixture);
+  assert.equal(report.totalRevenue, 1600);
+  assert.equal(report.uniqueOrders, 3);
+  assert.equal(report.totalUnits, 6);
+  assert.equal(report.averageOrderValue, 1600 / 3);
+});
+
+test("groups by store and region in descending revenue order", () => {
+  assert.deepEqual(groupByStore(validFixture).map(({ storeId, orders, revenue }) => ({ storeId, orders, revenue })), [
+    { storeId: "101", orders: 2, revenue: 1000 },
+    { storeId: "102", orders: 1, revenue: 600 },
+  ]);
+  assert.deepEqual(groupByRegion(validFixture).map(({ salesRegion, revenue }) => ({ salesRegion, revenue })), [
+    { salesRegion: "North", revenue: 1000 },
+    { salesRegion: "South", revenue: 600 },
+  ]);
+});
+
+test("detects duplicates and invalid records", () => {
+  const base = { date: "2026-07-06", storeId: "101", storeName: "Downtown", product: "Desk", productCategory: "Furniture", salesRegion: "North", quantitySold: "1", revenue: "100", sourceFile: "test.csv", rowNumber: 2 };
+  const result = validateRecords([
+    { ...base, orderNumber: "DUP-1" },
+    { ...base, orderNumber: "DUP-1", rowNumber: 3 },
+    { ...base, orderNumber: "BAD-1", rowNumber: 4, quantitySold: "-2", salesRegion: "" },
+  ]);
+  assert.equal(result.duplicateRecords, 2);
+  assert.equal(result.validRecords.length, 0);
+  assert.ok(result.invalidRecords.some((record) => record.error === "Duplicate order number"));
+  assert.ok(result.invalidRecords.some((record) => record.error === "Quantity must be a positive number"));
+  assert.ok(result.invalidRecords.some((record) => record.error === "Missing sales region"));
+});
+
+test("handles empty input safely", () => {
+  const report = calculateReport([]);
+  assert.equal(report.totalRevenue, 0);
+  assert.equal(report.uniqueOrders, 0);
+  assert.equal(report.averageOrderValue, 0);
+  assert.deepEqual(report.stores, []);
+});
+
+test("sample files produce the manually verified totals", async () => {
+  const files = ["store-101.csv", "store-102.csv", "store-103.csv"];
+  const parsed = await Promise.all(files.map(async (name) => parseCsvText(await readFile(new URL(`../sample-files/${name}`, import.meta.url), "utf8"), name)));
+  const records = parsed.flatMap((file) => file.records);
+  const result = validateRecords(records, parsed.flatMap((file) => file.fileErrors));
+  const report = calculateReport(result.validRecords);
+  assert.equal(records.length, 30);
+  assert.equal(result.validRecords.length, 25);
+  assert.equal(result.duplicateRecords, 2);
+  assert.equal(report.totalRevenue, 21030);
+  assert.equal(report.totalUnits, 99);
+  assert.equal(report.uniqueOrders, 25);
+  assert.equal(report.averageOrderValue, 841.2);
+  assert.equal(report.highestRevenueStore, "Westgate");
+  assert.equal(report.highestRevenueRegion, "West");
+  assert.equal(report.highestRevenueProduct, "Ergonomic Chair");
+  assert.equal(report.topSellingProduct, "Wireless Mouse");
+});

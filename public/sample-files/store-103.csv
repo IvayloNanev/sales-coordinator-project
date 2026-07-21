@@ -1,0 +1,11 @@
+Date,Store ID,Store name,Order number,Customer name,Product,Product category,Sales region,Quantity sold,Revenue
+2026-07-06,103,Westgate,103-001,Bluebird Agency,Ergonomic Chair,Furniture,West,4,2400
+2026-07-06,103,Westgate,103-002,Cascade Tech,Standing Desk,Furniture,West,2,1800
+2026-07-07,103,Westgate,103-003,Greenline Retail,Desk Lamp,Lighting,West,7,630
+2026-07-07,103,Westgate,103-004,Horizon Hotel,Monitor 27,Electronics,West,3,1050
+2026-07-08,103,Westgate,103-005,Ironwood Inc,Mechanical Keyboard,Accessories,West,6,
+2026-07-08,103,Westgate,103-006,Maple Services,Wireless Mouse,Accessories,West,12,360
+2026-07-09,103,Westgate,103-007,Nova Consulting,Wireless Headset,Electronics,,5,600
+2026-07-09,103,Westgate,103-008,Parkside Group,File Cabinet,Furniture,West,2,800
+2026-07-10,103,Westgate,103-009,Silverline Co,Webcam,Electronics,West,5,1000
+2026-07-10,103,Westgate,103-010,Union Works,Docking Station,Electronics,West,2,500
