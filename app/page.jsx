@@ -7,7 +7,7 @@ import ReportSetup from "./components/ReportSetup";
 import ValidationResults from "./components/ValidationResults";
 import DataApproval from "./components/DataApproval";
 import ReportDashboard from "./components/ReportDashboard";
-import { calculateReport, parseCsvFile, validateRecords } from "../lib/sales";
+import { calculateReport, parseCsvFile, recordsToCsv, validateRecords } from "../lib/sales";
 
 const initialState = { startDate: "", endDate: "", files: [] };
 
@@ -51,6 +51,18 @@ export default function Home() {
     setReportApproved(false);
   };
 
+  const downloadCleanedData = () => {
+    const csv = recordsToCsv(validation?.validRecords ?? []);
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `cleaned-sales-${setup.startDate}-to-${setup.endDate}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
   return (
     <div className="app-shell">
       <ProgressHeader currentStep={step} />
@@ -58,7 +70,7 @@ export default function Home() {
         {step === "welcome" && <WelcomeScreen onStart={() => setStep("setup")} />}
         {step === "setup" && <ReportSetup {...setup} onDates={(key, value) => setSetup((current) => ({ ...current, [key]: value }))} onFiles={addFiles} onRemove={(file) => setSetup((current) => ({ ...current, files: current.files.filter((item) => item !== file) }))} onValidate={runValidation} />}
         {step === "validation" && validation && <ValidationResults fileCount={setup.files.length} totalRecords={totalRecords} results={validation} onContinue={() => setStep("approval")} onReturn={() => setStep("setup")} />}
-        {step === "approval" && <DataApproval report={report} startDate={setup.startDate} endDate={setup.endDate} approved={dataApproved} onApprove={setDataApproved} onGenerate={() => { setGeneratedDate(new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date())); setStep("report"); }} onReturn={() => setStep("validation")} />}
+        {step === "approval" && <DataApproval report={report} startDate={setup.startDate} endDate={setup.endDate} approved={dataApproved} onApprove={setDataApproved} onDownload={downloadCleanedData} onGenerate={() => { setGeneratedDate(new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date())); setStep("report"); }} onReturn={() => setStep("validation")} />}
         {step === "report" && <ReportDashboard report={report} startDate={setup.startDate} endDate={setup.endDate} generatedDate={generatedDate} reportApproved={reportApproved} onApprove={setReportApproved} onPrint={() => window.print()} onRestart={restart} />}
         {isValidating && <div className="loading-overlay" role="status"><span />Validating store data…</div>}
       </main>

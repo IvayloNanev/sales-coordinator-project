@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { calculateReport, groupByRegion, groupByStore, parseCsvText, validateRecords } from "../lib/sales.js";
+import { calculateReport, groupByRegion, groupByStore, parseCsvText, recordsToCsv, validateRecords } from "../lib/sales.js";
 
 const validFixture = [
   { storeId: "101", storeName: "Downtown", orderNumber: "A-1", product: "Desk", productCategory: "Furniture", salesRegion: "North", quantitySold: 2, revenue: 800 },
@@ -48,6 +48,13 @@ test("handles empty input safely", () => {
   assert.equal(report.uniqueOrders, 0);
   assert.equal(report.averageOrderValue, 0);
   assert.deepEqual(report.stores, []);
+});
+
+test("exports cleaned records as a correctly escaped CSV", () => {
+  const csv = recordsToCsv([{ date: "2026-07-06", storeId: "101", storeName: "Downtown", orderNumber: "A-1", customerName: "Smith, Jane", product: 'Chair "Plus"', productCategory: "Furniture", salesRegion: "North", quantitySold: 2, revenue: 800 }]);
+  assert.match(csv, /^Date,Store ID,Store name,Order number/);
+  assert.match(csv, /"Smith, Jane"/);
+  assert.match(csv, /"Chair ""Plus"""/);
 });
 
 test("sample files produce the manually verified totals", async () => {
