@@ -89,23 +89,6 @@ export default function Home() {
     <div className="app-shell">
       <ProgressHeader validationReady={Boolean(validation)} reportReady={reportReady} />
       <main id="main">
-        <section className="hero no-print" aria-labelledby="hero-title">
-          <div className="hero-copy">
-            <p className="eyebrow"><span /> Weekly performance workspace</p>
-            <h1 id="hero-title">Turn scattered store files into <em>one clear story.</em></h1>
-            <p>Set the period, check every row, and build a manager-ready sales report—all in one focused workspace.</p>
-            <div className="hero-points" aria-label="Product benefits">
-              <span>01 · Local processing</span><span>02 · Instant validation</span><span>03 · Clean export</span>
-            </div>
-          </div>
-          <aside className="hero-card" aria-label="Workflow overview">
-            <span className="hero-card-label">Your workflow</span>
-            <strong>Three steps.<br />One page.</strong>
-            <div className="mini-flow"><i className="done">1</i><b /><i className={validation ? "done" : ""}>2</i><b /><i className={reportReady ? "done" : ""}>3</i></div>
-            <small>Your files never leave this browser.</small>
-          </aside>
-        </section>
-
         <div className="workflow" id="workspace">
           <section className="workflow-section" id="upload" aria-labelledby="upload-title">
             <div className="section-kicker"><span>01</span><div><p>Prepare</p><h2 id="upload-title">Set up your report</h2></div></div>

@@ -214,25 +214,8 @@ td:last-child, th:last-child { text-align: right; }
 .progress .active { background: var(--green-soft); }
 
 #main { width: 100%; flex: 1; }
-.hero { width: min(1180px, calc(100% - 48px)); display: grid; grid-template-columns: minmax(0, 1fr) 330px; align-items: stretch; gap: 22px; margin: 0 auto; padding: 58px 0 50px; animation: page-in .5s ease both; }
-.hero-copy { padding: 18px 0; }
-.hero-copy .eyebrow { display: flex; align-items: center; gap: 8px; }
-.hero-copy .eyebrow span { width: 22px; height: 1px; background: var(--green); }
-.hero-copy h1 { max-width: 760px; margin: 0; font-size: clamp(42px, 6vw, 72px); line-height: .98; letter-spacing: -.055em; }
-.hero-copy h1 em { color: var(--green); font-family: Georgia, serif; font-weight: 400; }
-.hero-copy > p:not(.eyebrow) { max-width: 670px; margin: 20px 0 0; color: var(--muted); font-size: 16px; line-height: 1.65; }
-.hero-points { display: flex; flex-wrap: wrap; gap: 10px 24px; margin-top: 30px; color: #56645e; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.hero-card { display: flex; flex-direction: column; justify-content: space-between; min-height: 270px; padding: 28px; border-radius: 20px; color: white; background: linear-gradient(145deg, #173e32, #0d2f25); box-shadow: 0 22px 50px rgba(14,77,59,.2); position: relative; overflow: hidden; }
-.hero-card::after { content: ""; position: absolute; width: 170px; height: 170px; right: -58px; bottom: -68px; border: 1px solid rgba(255,255,255,.14); border-radius: 50%; box-shadow: 0 0 0 32px rgba(255,255,255,.035), 0 0 0 64px rgba(255,255,255,.025); }
-.hero-card-label { color: #9bceb8; font-size: 9px; font-weight: 850; letter-spacing: .13em; text-transform: uppercase; }
-.hero-card > strong { font-family: Georgia, serif; font-size: 32px; font-weight: 400; line-height: 1.12; }
-.hero-card small { color: #a8c5b9; font-size: 10px; }
-.mini-flow { display: grid; grid-template-columns: 26px 1fr 26px 1fr 26px; align-items: center; position: relative; z-index: 1; }
-.mini-flow i { display: grid; place-items: center; width: 26px; height: 26px; border: 1px solid rgba(255,255,255,.35); border-radius: 50%; color: #b9cdc4; font-size: 10px; font-style: normal; font-weight: 800; }
-.mini-flow i.done { color: var(--green-dark); border-color: #8bc8ad; background: #9ed1bb; }
-.mini-flow b { height: 1px; background: rgba(255,255,255,.22); }
 
-.workflow { width: min(1180px, calc(100% - 48px)); margin: 0 auto 90px; }
+.workflow { width: min(1180px, calc(100% - 48px)); margin: 0 auto 90px; padding-top: 18px; }
 .workflow-section { scroll-margin-top: 96px; padding: 42px 0 52px; border-top: 1px solid var(--line); }
 .workflow-section:first-child { border-top-color: #b9cec4; }
 .section-kicker { display: grid; grid-template-columns: 48px minmax(0,1fr) auto; align-items: center; gap: 15px; margin-bottom: 22px; }
@@ -306,7 +289,6 @@ td:last-child, th:last-child { text-align: right; }
 @keyframes grow-bar { from { width: 0; } }
 
 @media (max-width: 960px) {
-  .hero { grid-template-columns: minmax(0, 1fr) 280px; }
   .report-story { grid-template-columns: 1fr; }
   .summary-card { min-height: 260px; }
 }
@@ -315,10 +297,6 @@ td:last-child, th:last-child { text-align: right; }
   .app-header { grid-template-columns: 1fr auto; gap: 12px; }
   .progress { grid-row: 2; grid-column: 1 / -1; width: 100%; justify-content: center; }
   .privacy-note { display: none; }
-  .hero { width: min(100% - 28px, 1180px); grid-template-columns: 1fr; padding: 34px 0 36px; }
-  .hero-copy { padding: 0; }
-  .hero-copy h1 { font-size: clamp(39px, 12vw, 56px); }
-  .hero-card { min-height: 220px; }
   .workflow { width: min(100% - 28px, 1180px); margin-bottom: 55px; }
   .workflow-section { scroll-margin-top: 128px; padding: 32px 0 42px; }
   .section-kicker { grid-template-columns: 42px minmax(0,1fr) auto; gap: 11px; }
@@ -336,8 +314,6 @@ td:last-child, th:last-child { text-align: right; }
   .progress a, .progress > span { gap: 4px; padding: 5px; font-size: 9px; }
   .progress > * + *::before { width: 14px; }
   .progress a > span, .progress > span > span { width: 22px; height: 22px; }
-  .hero-points { display: grid; gap: 8px; }
-  .hero-card { padding: 23px; }
   .section-status { display: none !important; }
   .validation-content { padding: 18px; }
   .validation-topline strong { font-size: 20px; }
