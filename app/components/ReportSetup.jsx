@@ -1,10 +1,11 @@
 import { useState } from "react";
 
-export default function ReportSetup({ startDate, endDate, files, onDates, onFiles, onRemove }) {
+export default function ReportSetup({ startDate, endDate, files, onDates, onFiles, onRemove, onValidate }) {
   const [fileNotice, setFileNotice] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const periodReady = Boolean(startDate && endDate && startDate <= endDate);
   const filesReady = files.length > 0;
+  const ready = periodReady && filesReady;
   const addSelectedFiles = (incoming) => {
     const csvFiles = incoming.filter((file) => file.name.toLowerCase().endsWith(".csv"));
     onFiles(csvFiles);
@@ -59,7 +60,8 @@ export default function ReportSetup({ startDate, endDate, files, onDates, onFile
             <p className={periodReady ? "complete" : "incomplete"}><span aria-hidden="true">{periodReady ? "✓" : "1"}</span><strong>Reporting period</strong><small>{periodReady ? `${startDate} to ${endDate}` : "Select a start date and end date"}</small></p>
             <p className={filesReady ? "complete" : "incomplete"}><span aria-hidden="true">{filesReady ? "✓" : "2"}</span><strong>Store CSV files</strong><small>{filesReady ? `${files.length} ${files.length === 1 ? "file" : "files"} ready` : "Upload at least one CSV file"}</small></p>
           </div>
-          <p className="menu-hint">When both requirements are complete, choose <strong>Validate</strong> or <strong>Report</strong> from the menu above.</p>
+          <button className="button primary full" disabled={!ready} onClick={onValidate}>Validate Store Data <span aria-hidden="true">→</span></button>
+          {!ready && <p className="disabled-hint">Complete the unchecked requirement above to enable validation.</p>}
         </aside>
       </div>
     </section>

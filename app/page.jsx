@@ -102,7 +102,7 @@ export default function Home() {
     <div className="app-shell">
       <ProgressHeader currentStep={step} onNavigate={navigateToStep} />
       <main id="main" className={step === "report" ? "report-main" : "main-content"}>
-        {step === "setup" && <ReportSetup {...setup} onDates={updateDate} onFiles={addFiles} onRemove={removeFile} />}
+        {step === "setup" && <ReportSetup {...setup} onDates={updateDate} onFiles={addFiles} onRemove={removeFile} onValidate={runValidation} />}
         {step === "validation" && validation && <ValidationResults fileCount={setup.files.length} totalRecords={totalRecords} results={validation} onContinue={() => { setReportDate(); setStep("report"); }} onReturn={() => setStep("setup")} />}
         {step === "report" && <ReportDashboard report={report} startDate={setup.startDate} endDate={setup.endDate} generatedDate={generatedDate} onDownload={downloadCleanedData} onRestart={restart} />}
         {isValidating && <div className="loading-overlay" role="status"><span />Validating store data…</div>}
