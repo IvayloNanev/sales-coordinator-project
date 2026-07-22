@@ -285,6 +285,8 @@ td:last-child, th:last-child { text-align: right; }
 .page-view { width: min(1180px, calc(100% - 48px)); margin: 0 auto; padding: clamp(42px, 7vw, 86px) 0 92px; animation: rise-in .45s cubic-bezier(.2,.75,.25,1) both; }
 
 .intake-layout { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(310px, .75fr); align-items: start; gap: 18px; }
+.intake-layout:not(.has-review) { grid-template-columns: minmax(0, 800px); justify-content: center; }
+.intake-layout:not(.has-review) .intake-upload { width: 100%; }
 .intake-upload { padding: clamp(30px, 5vw, 58px); }
 .intake-heading { max-width: 680px; }
 .intake-heading h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: clamp(42px, 6vw, 70px); font-weight: 400; line-height: .98; letter-spacing: -.055em; }

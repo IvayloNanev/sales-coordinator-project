@@ -15,6 +15,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   const periodReady = Boolean(startDate && endDate && startDate <= endDate);
   const validationReady = Boolean(validation && validation.validRecords.length);
   const ready = filesReady && periodReady && validationReady && !isValidating;
+  const reviewVisible = Boolean(validation && !isValidating);
   const flaggedRows = validation
     ? new Set(validation.invalidRecords.map((record) => `${record.sourceFile}-${record.rowNumber}`)).size
     : 0;
@@ -42,7 +43,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   };
 
   return (
-    <div className="intake-layout">
+    <div className={`intake-layout${reviewVisible ? " has-review" : ""}`}>
       <section className="panel intake-upload" aria-labelledby="files-title">
         <div className="intake-heading">
           <p className="eyebrow">Weekly sales intake</p>
@@ -68,13 +69,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
         </div>
       </section>
 
-      <aside className="intake-status" aria-label="Automatic data review">
-        {!validation || isValidating ? (
-          <div className="review-waiting-card panel">
-            <span className="status-icon" aria-hidden="true">{isValidating ? "···" : "1"}</span>
-            <div><p className="eyebrow">Automatic review</p><h2>{isValidating ? "Checking your data…" : "Your data card will appear here."}</h2><p>{isValidating ? "Extracting tables, dates, totals, duplicates, and row-level errors." : "Drop CSV, Excel, PDF, JSON, or text files to see a complete quality summary."}</p></div>
-          </div>
-        ) : (
+      {reviewVisible && <aside className="intake-status" aria-label="Automatic data review">
           <section className={`data-review-card panel${flaggedRows ? " has-errors" : " all-clear"}`} aria-labelledby="data-review-title">
             <header className="data-review-head">
               <div><p className="eyebrow">Automatic review complete</p><h2 id="data-review-title">{flaggedRows ? "Data ready—with flags" : "All data looks clean"}</h2></div>
@@ -105,10 +100,9 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
               <div className="all-clear-strip"><span aria-hidden="true">✓</span><div><strong>No errors found</strong><small>Every row will be included in the report.</small></div></div>
             )}
           </section>
-        )}
         <button className="button primary full continue-button" type="button" disabled={!ready} onClick={onProduceResults}>Produce results <span aria-hidden="true">→</span></button>
         {!ready && <p className="disabled-hint">Upload at least one file with a readable sales table and valid dated rows to continue.</p>}
-      </aside>
+      </aside>}
     </div>
   );
 }
