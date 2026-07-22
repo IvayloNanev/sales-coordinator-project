@@ -6,6 +6,8 @@ const formatPeriod = (startDate, endDate) => {
   return `${format(startDate)} – ${format(endDate)}`;
 };
 
+const fileType = (file) => file.name.split(".").pop()?.slice(0, 5).toUpperCase() || "FILE";
+
 export default function ReportSetup({ startDate, endDate, files, validation, totalRecords, isValidating, onFiles, onRemove, onProduceResults }) {
   const [fileNotice, setFileNotice] = useState("");
   const [isDragging, setIsDragging] = useState(false);
@@ -18,11 +20,10 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
     : 0;
 
   const addSelectedFiles = async (incoming) => {
-    const csvFiles = incoming.filter((file) => file.name.toLowerCase().endsWith(".csv"));
-    await onFiles(csvFiles);
-    setFileNotice(csvFiles.length
-      ? `${csvFiles.length} CSV ${csvFiles.length === 1 ? "file" : "files"} added and checked automatically.`
-      : "No CSV files were added. Choose files ending in .csv.");
+    await onFiles(incoming);
+    setFileNotice(incoming.length
+      ? `${incoming.length} ${incoming.length === 1 ? "file" : "files"} added and checked automatically.`
+      : "No files were selected.");
   };
 
   const loadSamples = async () => {
@@ -46,7 +47,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
         <div className="intake-heading">
           <p className="eyebrow">Weekly sales intake</p>
           <h1 id="files-title">Drop the files.<br />Get the results.</h1>
-          <p>Add every store CSV at once. Salescraft reads the date range, reviews every row automatically, and gets your clean report ready.</p>
+          <p>Add files in any format. Salescraft extracts readable sales tables, detects the date range, and flags anything it cannot validate.</p>
         </div>
         <label
           className={`drop-zone hero-drop-zone${isDragging ? " dragging" : ""}${filesReady ? " has-files" : ""}`}
@@ -56,9 +57,9 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
           onDrop={handleDrop}
         >
           <span className="upload-icon" aria-hidden="true">{isValidating ? "···" : filesReady ? "✓" : "⇧"}</span>
-          <strong>{isDragging ? "Drop CSV files here" : isValidating ? "Reading and validating…" : filesReady ? `${files.length} ${files.length === 1 ? "file" : "files"} ready` : "Drag & drop store CSVs"}</strong>
+          <strong>{isDragging ? "Drop any files here" : isValidating ? "Reading and validating…" : filesReady ? `${files.length} ${files.length === 1 ? "file" : "files"} ready` : "Drag & drop any sales files"}</strong>
           <span>{filesReady ? "Drop more files or click to browse" : "or click to choose multiple files"}</span>
-          <input type="file" accept=".csv,text/csv" multiple onChange={(event) => { addSelectedFiles([...event.target.files]); event.currentTarget.value = ""; }} />
+          <input type="file" multiple onChange={(event) => { addSelectedFiles([...event.target.files]); event.currentTarget.value = ""; }} />
         </label>
         {fileNotice && <div className={`file-notice ${filesReady ? "success" : "warning"}`} role="status"><span aria-hidden="true">{filesReady ? "✓" : "!"}</span>{fileNotice}</div>}
         <div className="sample-callout">
@@ -71,7 +72,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
         {!validation || isValidating ? (
           <div className="review-waiting-card panel">
             <span className="status-icon" aria-hidden="true">{isValidating ? "···" : "1"}</span>
-            <div><p className="eyebrow">Automatic review</p><h2>{isValidating ? "Checking your data…" : "Your data card will appear here."}</h2><p>{isValidating ? "Reading dates, totals, duplicates, and row-level errors." : "Drop your CSV files to see a complete quality summary."}</p></div>
+            <div><p className="eyebrow">Automatic review</p><h2>{isValidating ? "Checking your data…" : "Your data card will appear here."}</h2><p>{isValidating ? "Extracting tables, dates, totals, duplicates, and row-level errors." : "Drop CSV, Excel, PDF, JSON, or text files to see a complete quality summary."}</p></div>
           </div>
         ) : (
           <section className={`data-review-card panel${flaggedRows ? " has-errors" : " all-clear"}`} aria-labelledby="data-review-title">
@@ -91,7 +92,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
 
             <div className="review-files">
               <small>Source files</small>
-              <ul>{files.map((file) => <li key={`${file.name}-${file.lastModified}`}><span><b>CSV</b><span>{file.name}</span><small>{Math.max(1, Math.round(file.size / 1024))} KB</small></span><button type="button" onClick={() => onRemove(file)} aria-label={`Remove ${file.name}`}>×</button></li>)}</ul>
+              <ul>{files.map((file) => <li key={`${file.name}-${file.lastModified}`}><span><b>{fileType(file)}</b><span>{file.name}</span><small>{Math.max(1, Math.round(file.size / 1024))} KB</small></span><button type="button" onClick={() => onRemove(file)} aria-label={`Remove ${file.name}`}>×</button></li>)}</ul>
             </div>
 
             {flaggedRows ? (
@@ -106,7 +107,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
           </section>
         )}
         <button className="button primary full continue-button" type="button" disabled={!ready} onClick={onProduceResults}>Produce results <span aria-hidden="true">→</span></button>
-        {!ready && <p className="disabled-hint">Upload at least one CSV with valid dated rows to continue.</p>}
+        {!ready && <p className="disabled-hint">Upload at least one file with a readable sales table and valid dated rows to continue.</p>}
       </aside>
     </div>
   );

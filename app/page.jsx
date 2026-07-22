@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import ProgressHeader from "./components/ProgressHeader";
 import ReportSetup from "./components/ReportSetup";
 import ReportDashboard from "./components/ReportDashboard";
-import { calculateReport, getDateRange, parseCsvFile, recordsToCsv, validateRecords } from "../lib/sales";
+import { calculateReport, getDateRange, parseInputFile, recordsToCsv, validateRecords } from "../lib/sales";
 
 const initialState = { startDate: "", endDate: "", files: [] };
 
@@ -29,7 +29,7 @@ export default function Home() {
 
     setIsValidating(true);
     try {
-      const parsed = await Promise.all(files.map(parseCsvFile));
+      const parsed = await Promise.all(files.map(parseInputFile));
       const records = parsed.flatMap((file) => file.records);
       const range = getDateRange(records);
       const results = validateRecords(records, parsed.flatMap((file) => file.fileErrors));
@@ -43,8 +43,7 @@ export default function Home() {
   };
 
   const addFiles = async (incoming) => {
-    const csvFiles = incoming.filter((file) => file.name.toLowerCase().endsWith(".csv"));
-    const files = [...setup.files, ...csvFiles.filter((file) => !setup.files.some((existing) => existing.name === file.name && existing.size === file.size))];
+    const files = [...setup.files, ...incoming.filter((file) => !setup.files.some((existing) => existing.name === file.name && existing.size === file.size))];
     await analyzeFiles(files);
   };
 

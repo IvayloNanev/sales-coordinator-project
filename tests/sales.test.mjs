@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { calculateReport, getDateRange, groupByRegion, groupByStore, normalizeDate, parseCsvText, recordsToCsv, validateRecords } from "../lib/sales.js";
+import { calculateReport, getDateRange, groupByRegion, groupByStore, normalizeDate, parseCsvText, parseInputFile, recordsToCsv, validateRecords } from "../lib/sales.js";
 
 const validFixture = [
   { storeId: "101", storeName: "Downtown", orderNumber: "A-1", product: "Desk", productCategory: "Furniture", salesRegion: "North", quantitySold: 2, revenue: 800 },
@@ -86,4 +86,24 @@ test("sample files produce the manually verified totals", async () => {
   assert.equal(report.highestRevenueRegion, "West");
   assert.equal(report.highestRevenueProduct, "Ergonomic Chair");
   assert.equal(report.topSellingProduct, "Wireless Mouse");
+});
+
+test("accepts tabular JSON, TSV, and flags unreadable file formats", async () => {
+  const row = {
+    Date: "2026-07-06", "Store ID": "101", "Store name": "Downtown", "Order number": "A-1",
+    "Customer name": "Jane", Product: "Desk", "Product category": "Furniture", "Sales region": "North",
+    "Quantity sold": 2, Revenue: 800,
+  };
+  const json = await parseInputFile({ name: "sales.json", type: "application/json", text: async () => JSON.stringify([row]) });
+  assert.equal(json.records.length, 1);
+  assert.equal(json.records[0].orderNumber, "A-1");
+
+  const tsvText = `${Object.keys(row).join("\t")}\n${Object.values(row).join("\t")}`;
+  const tsv = await parseInputFile({ name: "sales.tsv", type: "text/tab-separated-values", text: async () => tsvText });
+  assert.equal(tsv.records.length, 1);
+  assert.equal(tsv.records[0].revenue, "800");
+
+  const unknown = await parseInputFile({ name: "sales.photo", type: "application/octet-stream" });
+  assert.equal(unknown.records.length, 0);
+  assert.match(unknown.fileErrors[0].error, /format does not expose/i);
 });
