@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import ProgressHeader from "./components/ProgressHeader";
 import ReportSetup from "./components/ReportSetup";
 import ReportDashboard from "./components/ReportDashboard";
-import { calculateReport, getDateRange, parseInputFile, recordsToCsv, validateRecords } from "../lib/sales";
+import { calculateReport, getDateRange, parseInputFile, validateRecords } from "../lib/sales";
 
 const initialState = { startDate: "", endDate: "", files: [] };
 const coverageFields = [
@@ -80,8 +80,6 @@ export default function Home() {
     await analyzeFiles(files);
   };
 
-  const removeFile = async (file) => analyzeFiles(setup.files.filter((item) => item !== file));
-
   const navigate = (destination) => {
     if (destination === "results" && !resultsReady) return;
     if (destination === "results" && !generatedDate) {
@@ -103,33 +101,21 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const downloadCleanedData = () => {
-    const csv = recordsToCsv(validation?.validRecords ?? []);
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `cleaned-sales-${setup.startDate}-to-${setup.endDate}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
-
   return (
     <div className="app-shell">
-      <ProgressHeader page={page} resultsReady={resultsReady} onNavigate={navigate} />
+      <ProgressHeader onNavigate={navigate} />
       <main id="main" className="two-page-main">
         {page === "upload" ? (
           <section className="page-view intake-page" aria-label="Upload and validate sales files">
-            <ReportSetup {...setup} validation={validation} totalRecords={totalRecords} intakeAnalysis={intakeAnalysis} report={report} isValidating={isValidating} onFiles={addFiles} onRemove={removeFile} onProduceResults={produceResults} />
+            <ReportSetup {...setup} validation={validation} totalRecords={totalRecords} intakeAnalysis={intakeAnalysis} report={report} isValidating={isValidating} onFiles={addFiles} onProduceResults={produceResults} />
           </section>
         ) : (
           <section className="page-view results-page" aria-label="Generated sales results">
-            <ReportDashboard report={report} startDate={setup.startDate} endDate={setup.endDate} generatedDate={generatedDate} fileCount={setup.files.length} totalRecords={totalRecords} validRowCount={validation?.validRecords.length ?? 0} issueCount={validation?.invalidRecords.length ?? 0} duplicateRecords={validation?.duplicateRecords ?? 0} onDownload={downloadCleanedData} onRestart={restart} />
+            <ReportDashboard report={report} startDate={setup.startDate} endDate={setup.endDate} generatedDate={generatedDate} fileCount={setup.files.length} totalRecords={totalRecords} validRowCount={validation?.validRecords.length ?? 0} issueCount={validation?.invalidRecords.length ?? 0} duplicateRecords={validation?.duplicateRecords ?? 0} onRestart={restart} />
           </section>
         )}
       </main>
-      <footer className="site-footer no-print"><strong>Salescraft</strong><span>Private by design · Processed locally in your browser</span><button type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>Back to top ↑</button></footer>
+      <footer className="site-footer no-print"><strong>Salescraft</strong><span>Local processing · No uploads</span></footer>
       {isValidating && <div className="loading-overlay" role="status"><span />Reading dates and checking every row…</div>}
     </div>
   );

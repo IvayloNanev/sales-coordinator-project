@@ -26,18 +26,18 @@ function RankedBars({ rows, labelKey, valueKey = "revenue", valueFormatter = for
 }
 
 function CategoryMix({ categories, totalRevenue }) {
-  const colors = ["#176b52", "#4eaa80", "#d49a45", "#8fa49b", "#a9685e", "#5b806f"];
-  let position = 0;
-  const stops = categories.slice(0, 6).map((category, index) => {
-    const start = position;
-    position += totalRevenue ? (category.revenue / totalRevenue) * 100 : 0;
-    return `${colors[index]} ${start}% ${position}%`;
+  const colors = ["#173f8a", "#3f6fba", "#7e9fd1", "#b5c8e5", "#c4a45b", "#61758f"];
+  const shares = categories.slice(0, 6).map((category) => totalRevenue ? (category.revenue / totalRevenue) * 100 : 0);
+  const stops = shares.map((share, index) => {
+    const start = shares.slice(0, index).reduce((sum, value) => sum + value, 0);
+    return `${colors[index]} ${start}% ${start + share}%`;
   });
-  if (position < 100) stops.push(`#e7ece9 ${position}% 100%`);
+  const covered = shares.reduce((sum, value) => sum + value, 0);
+  if (covered < 100) stops.push(`#e7ece9 ${covered}% 100%`);
   return <div className="mix-layout"><div className="donut" style={{ background: `conic-gradient(${stops.join(", ")})` }} role="img" aria-label="Revenue share by product category"><span><strong>{categories.length}</strong><small>categories</small></span></div><ul>{categories.slice(0, 6).map((category, index) => <li key={category.productCategory}><i style={{ background: colors[index] }} /><span>{category.productCategory}</span><strong>{totalRevenue ? Math.round((category.revenue / totalRevenue) * 100) : 0}%</strong></li>)}</ul></div>;
 }
 
-export default function ReportDashboard({ report, startDate, endDate, generatedDate, fileCount, totalRecords, validRowCount, issueCount, duplicateRecords, onDownload, onRestart }) {
+export default function ReportDashboard({ report, startDate, endDate, generatedDate, fileCount, totalRecords, validRowCount, issueCount, duplicateRecords, onRestart }) {
   const [view, setView] = useState("stores");
   const money = (value) => formatCurrency(value);
   const percent = (value) => `${Math.round(value)}%`;
@@ -61,7 +61,7 @@ export default function ReportDashboard({ report, startDate, endDate, generatedD
 
   return (
     <section className="report-shell expanded-report" aria-labelledby="report-title">
-      <header className="report-heading report-heading-expanded"><div><p className="eyebrow">Sales operations command center</p><h3 id="report-title">Performance, customers & order health</h3><p>{shortDate(startDate)} — {shortDate(endDate)}</p></div><div className="generated-meta"><span>Generated</span><strong>{generatedDate}</strong><small>{fileCount} files · {report.activeDays} active days</small></div></header>
+      <header className="report-heading report-heading-expanded"><div><p className="issue-line">{shortDate(startDate)} — {shortDate(endDate)}</p><h3 id="report-title">Weekly sales<br /><em>performance.</em></h3></div><div className="generated-meta"><strong>{generatedDate}</strong><small>{fileCount} files · {report.activeDays} active days</small></div></header>
 
       <section className="report-quality-strip" aria-label="Source data coverage"><div><span className="ready-dot" /><strong>{percent(cleanRate)} clean row coverage</strong></div><p>{validRowCount} valid rows from {totalRecords} received{excluded ? ` · ${excluded} rows excluded` : " · no rows excluded"}</p></section>
 
@@ -77,27 +77,27 @@ export default function ReportDashboard({ report, startDate, endDate, generatedD
       </div>
 
       <div className="report-overview-grid">
-        <section className="analysis-panel revenue-pulse" aria-labelledby="revenue-pulse-title"><div className="card-heading"><div><p className="eyebrow">Revenue pulse</p><h4 id="revenue-pulse-title">Daily revenue & order volume</h4></div><span>Best day · {shortDate(report.bestDay?.date)} · {money(report.bestDay?.revenue ?? 0)}</span></div><DailyRevenueChart days={report.daily} /></section>
-        <aside className="action-center" aria-labelledby="action-center-title"><div className="card-heading"><div><p className="eyebrow">Coordinator brief</p><h4 id="action-center-title">What needs attention</h4></div></div><ol>{actions.map((action, index) => <li key={action.label}><span>{String(index + 1).padStart(2, "0")}</span><div><small>{action.label}</small><strong>{action.title}</strong><p>{action.detail}</p></div></li>)}</ol></aside>
+        <section className="analysis-panel revenue-pulse" aria-labelledby="revenue-pulse-title"><div className="card-heading"><h4 id="revenue-pulse-title">Daily revenue</h4><span>Best · {shortDate(report.bestDay?.date)} · {money(report.bestDay?.revenue ?? 0)}</span></div><DailyRevenueChart days={report.daily} /></section>
+        <aside className="action-center" aria-labelledby="action-center-title"><div className="card-heading"><h4 id="action-center-title">Priorities</h4></div><ol>{actions.map((action, index) => <li key={action.label}><span>{String(index + 1).padStart(2, "0")}</span><div><small>{action.label}</small><strong>{action.title}</strong><p>{action.detail}</p></div></li>)}</ol></aside>
       </div>
 
       <div className="report-secondary-grid">
-        <section className="analysis-panel" aria-labelledby="region-performance-title"><div className="card-heading"><div><p className="eyebrow">Territory performance</p><h4 id="region-performance-title">Revenue by region</h4></div><span>{report.regions.length} regions</span></div><RankedBars rows={report.regions} labelKey="salesRegion" /></section>
-        <section className="analysis-panel" aria-labelledby="category-mix-title"><div className="card-heading"><div><p className="eyebrow">Product portfolio</p><h4 id="category-mix-title">Category revenue mix</h4></div><span>{report.products.length} products</span></div><CategoryMix categories={report.categories} totalRevenue={report.totalRevenue} /></section>
+        <section className="analysis-panel" aria-labelledby="region-performance-title"><div className="card-heading"><h4 id="region-performance-title">Regions</h4><span>{report.regions.length} total</span></div><RankedBars rows={report.regions} labelKey="salesRegion" /></section>
+        <section className="analysis-panel" aria-labelledby="category-mix-title"><div className="card-heading"><h4 id="category-mix-title">Category mix</h4><span>{report.products.length} products</span></div><CategoryMix categories={report.categories} totalRevenue={report.totalRevenue} /></section>
       </div>
 
       <div className="report-insight-grid">
-        <section className="analysis-panel customer-intelligence" aria-labelledby="customer-title"><div className="card-heading"><div><p className="eyebrow">Account management</p><h4 id="customer-title">Customer concentration</h4></div><span>Top 3 · {percent(report.topThreeCustomerShare)} of revenue</span></div><RankedBars rows={report.customers} labelKey="customerName" /></section>
-        <section className="analysis-panel order-economics" aria-labelledby="economics-title"><div className="card-heading"><div><p className="eyebrow">Order execution</p><h4 id="economics-title">Order economics</h4></div></div><dl><div><dt>Largest order</dt><dd>{money(report.largestOrder?.revenue ?? 0)}</dd><small>{report.largestOrder?.orderNumber ?? "—"} · {report.largestOrder?.customerName ?? "—"}</small></div><div><dt>Median order</dt><dd>{money(report.medianOrderValue)}</dd><small>Midpoint of all valid orders</small></div><div><dt>Units per order</dt><dd>{report.unitsPerOrder.toFixed(1)}</dd><small>{money(report.revenuePerUnit)} revenue per unit</small></div><div><dt>Repeat customers</dt><dd>{report.repeatCustomerCount}</dd><small>{percent(report.repeatCustomerRate)} of customer base</small></div></dl></section>
+        <section className="analysis-panel customer-intelligence" aria-labelledby="customer-title"><div className="card-heading"><h4 id="customer-title">Customers</h4><span>Top 3 · {percent(report.topThreeCustomerShare)} of revenue</span></div><RankedBars rows={report.customers} labelKey="customerName" /></section>
+        <section className="analysis-panel order-economics" aria-labelledby="economics-title"><div className="card-heading"><h4 id="economics-title">Order economics</h4></div><dl><div><dt>Largest order</dt><dd>{money(report.largestOrder?.revenue ?? 0)}</dd><small>{report.largestOrder?.orderNumber ?? "—"} · {report.largestOrder?.customerName ?? "—"}</small></div><div><dt>Median order</dt><dd>{money(report.medianOrderValue)}</dd><small>Midpoint of all valid orders</small></div><div><dt>Units per order</dt><dd>{report.unitsPerOrder.toFixed(1)}</dd><small>{money(report.revenuePerUnit)} revenue per unit</small></div><div><dt>Repeat customers</dt><dd>{report.repeatCustomerCount}</dd><small>{percent(report.repeatCustomerRate)} of customer base</small></div></dl></section>
       </div>
 
-      <aside className="management-narrative"><span>“</span><div><p className="eyebrow">Management narrative</p><p>{generateSummary(report, startDate, endDate)}</p></div></aside>
+      <aside className="management-narrative"><span>“</span><p>{generateSummary(report, startDate, endDate)}</p></aside>
 
-      <section className="breakdown-card expanded-breakdown"><div className="breakdown-head"><div><p className="eyebrow">Audit-ready detail</p><h4>Explore every sales dimension</h4></div><div className="tabs" role="tablist" aria-label="Report breakdown">{Object.entries(views).map(([key, item]) => <button type="button" role="tab" aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)} key={key}>{item.label}</button>)}</div></div><DataTable rows={views[view].rows} columns={views[view].columns} label={views[view].label} /></section>
+      <section className="breakdown-card expanded-breakdown"><div className="breakdown-head"><h4>Detail</h4><div className="tabs" role="tablist" aria-label="Report breakdown">{Object.entries(views).map(([key, item]) => <button type="button" role="tab" aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)} key={key}>{item.label}</button>)}</div></div><DataTable rows={views[view].rows} columns={views[view].columns} label={views[view].label} /></section>
 
       <section className="source-boundary"><strong>Source-backed reporting</strong><p>This report uses only values present in the uploaded files. Quota attainment, pipeline value, win rate, forecast accuracy, margin, and sales-cycle length require target, opportunity-stage, cost, and lifecycle fields that are not part of the current source schema.</p></section>
 
-      <section className="report-actions no-print"><div><span className="ready-dot" /><div><strong>Your coordinator report is ready</strong><small>Print it, export the clean source data, or begin again.</small></div></div><div><button className="button ghost" onClick={onRestart}>New report</button><button className="button secondary" onClick={() => window.print()}>Print report</button><button className="button primary" onClick={onDownload}>Download CSV <span>↓</span></button></div></section>
+      <section className="report-actions no-print"><div><button className="button ghost" onClick={onRestart}>New report</button></div></section>
     </section>
   );
 }
