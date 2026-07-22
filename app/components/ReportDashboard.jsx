@@ -26,7 +26,7 @@ function RankedBars({ rows, labelKey, valueKey = "revenue", valueFormatter = for
 }
 
 function CategoryMix({ categories, totalRevenue }) {
-  const colors = ["#173f8a", "#3f6fba", "#7e9fd1", "#b5c8e5", "#c4a45b", "#61758f"];
+  const colors = ["#17365f", "#b88a35", "#315b84", "#d7b86a", "#6f7f91", "#8a6828"];
   const shares = categories.slice(0, 6).map((category) => totalRevenue ? (category.revenue / totalRevenue) * 100 : 0);
   const stops = shares.map((share, index) => {
     const start = shares.slice(0, index).reduce((sum, value) => sum + value, 0);

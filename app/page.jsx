@@ -96,6 +96,7 @@ export default function Home() {
     setValidation(null);
     setTotalRecords(0);
     setGeneratedDate("");
+    setIsValidating(false);
     setIntakeAnalysis({ files: [], coverage: [] });
     setPage("upload");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -103,7 +104,7 @@ export default function Home() {
 
   return (
     <div className="app-shell">
-      <ProgressHeader onNavigate={navigate} />
+      <ProgressHeader onNavigate={restart} />
       <main id="main" className="two-page-main">
         {page === "upload" ? (
           <section className="page-view intake-page" aria-label="Upload and validate sales files">
