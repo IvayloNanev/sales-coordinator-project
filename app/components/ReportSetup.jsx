@@ -6,9 +6,7 @@ const formatPeriod = (startDate, endDate) => {
   return `${format(startDate)} – ${format(endDate)}`;
 };
 
-const fileType = (file) => file.name.split(".").pop()?.slice(0, 5).toUpperCase() || "FILE";
-
-export default function ReportSetup({ startDate, endDate, files, validation, totalRecords, isValidating, onFiles, onRemove, onProduceResults }) {
+export default function ReportSetup({ startDate, endDate, files, validation, totalRecords, intakeAnalysis, report, isValidating, onFiles, onRemove, onProduceResults }) {
   const [fileNotice, setFileNotice] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const filesReady = files.length > 0;
@@ -71,14 +69,14 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
         </div>
       </section>
 
-      {reviewVisible && <aside className="intake-status" aria-label="Automatic data review">
+      {reviewVisible && <aside className="intake-status incoming-audit" aria-label="Automatic incoming data review">
           <section className={`data-review-card panel${flaggedRows ? " has-errors" : " all-clear"}`} aria-labelledby="data-review-title">
             <header className="data-review-head">
-              <div><p className="eyebrow">Automatic review complete</p><h2 id="data-review-title">{flaggedRows ? "Data ready—with flags" : "All data looks clean"}</h2></div>
+              <div><p className="eyebrow">Incoming data control</p><h2 id="data-review-title">{flaggedRows ? "Review complete—with exceptions" : "All incoming data is report-ready"}</h2><p>Source reconciliation, schema coverage, quality controls, and sales values detected before reporting.</p></div>
               <span className={`review-badge ${flaggedRows ? "warning" : "success"}`}>{flaggedRows ? `${flaggedRows} flagged` : "Passed"}</span>
             </header>
 
-            <dl className="data-facts">
+            <dl className="data-facts incoming-facts">
               <div><dt>Files</dt><dd>{files.length}</dd></div>
               <div><dt>Rows received</dt><dd>{totalRecords}</dd></div>
               <div><dt>Valid rows</dt><dd>{validation.validRecords.length}</dd></div>
@@ -87,9 +85,21 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
               <div><dt>Date range</dt><dd className="fact-date">{formatPeriod(startDate, endDate)}</dd></div>
             </dl>
 
-            <div className="review-files">
-              <small>Source files</small>
-              <ul>{files.map((file) => <li key={`${file.name}-${file.lastModified}`}><span><b>{fileType(file)}</b><span>{file.name}</span><small>{Math.max(1, Math.round(file.size / 1024))} KB</small></span><button type="button" onClick={() => onRemove(file)} aria-label={`Remove ${file.name}`}>×</button></li>)}</ul>
+            <section className="incoming-sales-snapshot" aria-labelledby="incoming-sales-title">
+              <div className="incoming-section-head"><div><p className="eyebrow">Sales values detected</p><h3 id="incoming-sales-title">What the incoming files contain</h3></div><small>Valid rows only</small></div>
+              <dl><div><dt>Revenue</dt><dd>{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(report.totalRevenue)}</dd></div><div><dt>Orders</dt><dd>{report.uniqueOrders}</dd></div><div><dt>Units</dt><dd>{report.totalUnits}</dd></div><div><dt>Customers</dt><dd>{report.customerCount}</dd></div><div><dt>Products</dt><dd>{report.products.length}</dd></div><div><dt>Stores / regions</dt><dd>{report.storeCount} / {report.regions.length}</dd></div></dl>
+            </section>
+
+            <div className="incoming-audit-grid">
+              <section className="source-ledger" aria-labelledby="source-ledger-title">
+                <div className="incoming-section-head"><div><p className="eyebrow">Source reconciliation</p><h3 id="source-ledger-title">File-by-file intake</h3></div><small>{intakeAnalysis.files.length} sources</small></div>
+                <div className="table-wrap"><table><thead><tr><th>Source</th><th>Extracted</th><th>Valid</th><th>Orders</th><th>Revenue</th><th>Status</th><th /></tr></thead><tbody>{intakeAnalysis.files.map((item, index) => <tr key={`${item.name}-${index}`}><td><span className="source-name"><b>{item.type}</b><span><strong>{item.name}</strong><small>{Math.max(1, Math.round(item.size / 1024))} KB · {item.startDate ? `${item.startDate}—${item.endDate}` : "No date range"}</small></span></span></td><td>{item.extractedRows}</td><td>{item.validRows}</td><td>{item.orders}</td><td>{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(item.revenue)}</td><td><span className={`source-status ${item.issues ? "flag" : "pass"}`}>{item.issues ? `${item.issues} issues` : "Ready"}</span></td><td><button type="button" onClick={() => onRemove(files[index])} aria-label={`Remove ${item.name}`}>×</button></td></tr>)}</tbody></table></div>
+              </section>
+
+              <section className="schema-audit" aria-labelledby="schema-audit-title">
+                <div className="incoming-section-head"><div><p className="eyebrow">CRM hygiene</p><h3 id="schema-audit-title">Required field coverage</h3></div><small>{intakeAnalysis.coverage.filter((field) => field.present === field.total && field.total).length}/{intakeAnalysis.coverage.length} complete</small></div>
+                <ul>{intakeAnalysis.coverage.map((field) => { const rate = field.total ? Math.round((field.present / field.total) * 100) : 0; return <li key={field.label}><div><span>{field.label}</span><strong className={rate < 100 ? "coverage-warning" : ""}>{rate}%</strong></div><div><i style={{ width: `${rate}%` }} /></div><small>{field.present} of {field.total} rows populated</small></li>; })}</ul>
+              </section>
             </div>
 
             {flaggedRows ? (
@@ -101,6 +111,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
             ) : (
               <div className="all-clear-strip"><span aria-hidden="true">✓</span><div><strong>No errors found</strong><small>Every row will be included in the report.</small></div></div>
             )}
+            <section className="coordinator-readiness" aria-label="Sales coordinator readiness checks"><div><span className={startDate && endDate ? "pass" : "flag"}>{startDate && endDate ? "✓" : "!"}</span><p><strong>Reporting period</strong><small>{startDate && endDate ? "Dates detected and normalized" : "A valid date range is missing"}</small></p></div><div><span className={validation.duplicateRecords ? "flag" : "pass"}>{validation.duplicateRecords ? "!" : "✓"}</span><p><strong>Order identity</strong><small>{validation.duplicateRecords ? `${validation.duplicateRecords} duplicate order rows require attention` : "Order numbers are unique"}</small></p></div><div><span className={report.customerCount ? "pass" : "flag"}>{report.customerCount ? "✓" : "!"}</span><p><strong>Customer records</strong><small>{report.customerCount ? `${report.customerCount} customer accounts detected` : "Customer attribution is missing"}</small></p></div><div><span className={validation.validRecords.length ? "pass" : "flag"}>{validation.validRecords.length ? "✓" : "!"}</span><p><strong>Report eligibility</strong><small>{validation.validRecords.length ? `${validation.validRecords.length} rows will flow into results` : "No valid rows can be reported"}</small></p></div></section>
           </section>
         <button className="button primary full continue-button" type="button" disabled={!ready} onClick={onProduceResults}>Produce results <span aria-hidden="true">→</span></button>
         {!ready && <p className="disabled-hint">Upload at least one file with a readable sales table and valid dated rows to continue.</p>}

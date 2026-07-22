@@ -7,6 +7,11 @@ import ReportDashboard from "./components/ReportDashboard";
 import { calculateReport, getDateRange, parseInputFile, recordsToCsv, validateRecords } from "../lib/sales";
 
 const initialState = { startDate: "", endDate: "", files: [] };
+const coverageFields = [
+  ["Date", "date"], ["Store ID", "storeId"], ["Store name", "storeName"], ["Order number", "orderNumber"],
+  ["Customer", "customerName"], ["Product", "product"], ["Category", "productCategory"], ["Region", "salesRegion"],
+  ["Quantity", "quantitySold"], ["Revenue", "revenue"],
+];
 
 export default function Home() {
   const [page, setPage] = useState("upload");
@@ -15,6 +20,7 @@ export default function Home() {
   const [totalRecords, setTotalRecords] = useState(0);
   const [generatedDate, setGeneratedDate] = useState("");
   const [isValidating, setIsValidating] = useState(false);
+  const [intakeAnalysis, setIntakeAnalysis] = useState({ files: [], coverage: [] });
   const report = useMemo(() => calculateReport(validation?.validRecords ?? []), [validation]);
   const resultsReady = Boolean(validation?.validRecords.length && setup.startDate && setup.endDate);
 
@@ -24,6 +30,7 @@ export default function Home() {
       setValidation(null);
       setTotalRecords(0);
       setGeneratedDate("");
+      setIntakeAnalysis({ files: [], coverage: [] });
       return;
     }
 
@@ -37,6 +44,32 @@ export default function Home() {
       setTotalRecords(records.length);
       setValidation(results);
       setGeneratedDate("");
+      const belongsToFile = (sourceFile, fileName) => sourceFile === fileName || sourceFile?.startsWith(`${fileName} ·`);
+      setIntakeAnalysis({
+        files: files.map((file, index) => {
+          const parsedFile = parsed[index];
+          const validRows = results.validRecords.filter((record) => belongsToFile(record.sourceFile, file.name));
+          const issues = results.invalidRecords.filter((record) => belongsToFile(record.sourceFile, file.name));
+          const range = getDateRange(parsedFile.records);
+          return {
+            name: file.name,
+            type: file.name.split(".").pop()?.toUpperCase() || "FILE",
+            size: file.size,
+            extractedRows: parsedFile.records.length,
+            validRows: validRows.length,
+            issues: issues.length,
+            startDate: range?.startDate ?? "",
+            endDate: range?.endDate ?? "",
+            revenue: validRows.reduce((sum, record) => sum + record.revenue, 0),
+            orders: new Set(validRows.map((record) => record.orderNumber)).size,
+          };
+        }),
+        coverage: coverageFields.map(([label, key]) => ({
+          label,
+          present: records.filter((record) => String(record[key] ?? "").trim()).length,
+          total: records.length,
+        })),
+      });
     } finally {
       setIsValidating(false);
     }
@@ -65,6 +98,7 @@ export default function Home() {
     setValidation(null);
     setTotalRecords(0);
     setGeneratedDate("");
+    setIntakeAnalysis({ files: [], coverage: [] });
     setPage("upload");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -87,7 +121,7 @@ export default function Home() {
       <main id="main" className="two-page-main">
         {page === "upload" ? (
           <section className="page-view intake-page" aria-label="Upload and validate sales files">
-            <ReportSetup {...setup} validation={validation} totalRecords={totalRecords} isValidating={isValidating} onFiles={addFiles} onRemove={removeFile} onProduceResults={produceResults} />
+            <ReportSetup {...setup} validation={validation} totalRecords={totalRecords} intakeAnalysis={intakeAnalysis} report={report} isValidating={isValidating} onFiles={addFiles} onRemove={removeFile} onProduceResults={produceResults} />
           </section>
         ) : (
           <section className="page-view results-page" aria-label="Generated sales results">
