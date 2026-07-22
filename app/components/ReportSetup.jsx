@@ -13,6 +13,9 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   const periodReady = Boolean(startDate && endDate && startDate <= endDate);
   const validationReady = Boolean(validation && validation.validRecords.length);
   const ready = filesReady && periodReady && validationReady && !isValidating;
+  const flaggedRows = validation
+    ? new Set(validation.invalidRecords.map((record) => `${record.sourceFile}-${record.rowNumber}`)).size
+    : 0;
 
   const addSelectedFiles = async (incoming) => {
     const csvFiles = incoming.filter((file) => file.name.toLowerCase().endsWith(".csv"));
@@ -64,21 +67,44 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
         </div>
       </section>
 
-      <aside className="intake-status" aria-label="Automatic intake results">
-        <div className={`status-card panel${filesReady ? " complete" : ""}`}>
-          <span className="status-icon" aria-hidden="true">{filesReady ? "✓" : "1"}</span>
-          <div><small>Files received</small><strong>{filesReady ? `${files.length} store ${files.length === 1 ? "file" : "files"}` : "Waiting for upload"}</strong></div>
-          {filesReady && <ul className="compact-file-list">{files.map((file) => <li key={`${file.name}-${file.lastModified}`}><span>{file.name}</span><button type="button" onClick={() => onRemove(file)} aria-label={`Remove ${file.name}`}>×</button></li>)}</ul>}
-        </div>
-        <div className={`status-card panel${periodReady ? " complete" : ""}`}>
-          <span className="status-icon" aria-hidden="true">{periodReady ? "✓" : "2"}</span>
-          <div><small>Date range detected</small><strong>{formatPeriod(startDate, endDate)}</strong></div>
-        </div>
-        <div className={`status-card panel${validation ? " complete" : ""}`}>
-          <span className="status-icon" aria-hidden="true">{isValidating ? "···" : validation ? "✓" : "3"}</span>
-          <div><small>Automatic validation</small><strong>{isValidating ? "Checking every row…" : validation ? `${validation.validRecords.length} of ${totalRecords} rows ready` : "Starts after upload"}</strong></div>
-          {validation && <div className="validation-mini"><span>{validation.invalidRecords.length} issues</span><span>{validation.duplicateRecords} duplicates</span></div>}
-        </div>
+      <aside className="intake-status" aria-label="Automatic data review">
+        {!validation || isValidating ? (
+          <div className="review-waiting-card panel">
+            <span className="status-icon" aria-hidden="true">{isValidating ? "···" : "1"}</span>
+            <div><p className="eyebrow">Automatic review</p><h2>{isValidating ? "Checking your data…" : "Your data card will appear here."}</h2><p>{isValidating ? "Reading dates, totals, duplicates, and row-level errors." : "Drop your CSV files to see a complete quality summary."}</p></div>
+          </div>
+        ) : (
+          <section className={`data-review-card panel${flaggedRows ? " has-errors" : " all-clear"}`} aria-labelledby="data-review-title">
+            <header className="data-review-head">
+              <div><p className="eyebrow">Automatic review complete</p><h2 id="data-review-title">{flaggedRows ? "Data ready—with flags" : "All data looks clean"}</h2></div>
+              <span className={`review-badge ${flaggedRows ? "warning" : "success"}`}>{flaggedRows ? `${flaggedRows} flagged` : "Passed"}</span>
+            </header>
+
+            <dl className="data-facts">
+              <div><dt>Files</dt><dd>{files.length}</dd></div>
+              <div><dt>Rows received</dt><dd>{totalRecords}</dd></div>
+              <div><dt>Valid rows</dt><dd>{validation.validRecords.length}</dd></div>
+              <div className={flaggedRows ? "fact-error" : ""}><dt>Flagged rows</dt><dd>{flaggedRows}</dd></div>
+              <div className={validation.duplicateRecords ? "fact-warning" : ""}><dt>Duplicates</dt><dd>{validation.duplicateRecords}</dd></div>
+              <div><dt>Date range</dt><dd className="fact-date">{formatPeriod(startDate, endDate)}</dd></div>
+            </dl>
+
+            <div className="review-files">
+              <small>Source files</small>
+              <ul>{files.map((file) => <li key={`${file.name}-${file.lastModified}`}><span><b>CSV</b><span>{file.name}</span><small>{Math.max(1, Math.round(file.size / 1024))} KB</small></span><button type="button" onClick={() => onRemove(file)} aria-label={`Remove ${file.name}`}>×</button></li>)}</ul>
+            </div>
+
+            {flaggedRows ? (
+              <details className="flagged-errors" open>
+                <summary><span><b>!</b> Errors need attention</span><small>{validation.invalidRecords.length} {validation.invalidRecords.length === 1 ? "issue" : "issues"}</small></summary>
+                <ul>{validation.invalidRecords.slice(0, 8).map((record, index) => <li key={`${record.sourceFile}-${record.rowNumber}-${record.error}-${index}`}><span><strong>{record.sourceFile}</strong><small>Row {record.rowNumber || "—"}{record.orderNumber ? ` · ${record.orderNumber}` : ""}</small></span><em>{record.error}</em></li>)}</ul>
+                {validation.invalidRecords.length > 8 && <p>+ {validation.invalidRecords.length - 8} more issues will be excluded from results.</p>}
+              </details>
+            ) : (
+              <div className="all-clear-strip"><span aria-hidden="true">✓</span><div><strong>No errors found</strong><small>Every row will be included in the report.</small></div></div>
+            )}
+          </section>
+        )}
         <button className="button primary full continue-button" type="button" disabled={!ready} onClick={onProduceResults}>Produce results <span aria-hidden="true">→</span></button>
         {!ready && <p className="disabled-hint">Upload at least one CSV with valid dated rows to continue.</p>}
       </aside>
