@@ -86,6 +86,13 @@ test("sample files produce the manually verified totals", async () => {
   assert.equal(report.highestRevenueRegion, "West");
   assert.equal(report.highestRevenueProduct, "Ergonomic Chair");
   assert.equal(report.topSellingProduct, "Wireless Mouse");
+  assert.equal(report.customerCount, 25);
+  assert.equal(report.medianOrderValue, 630);
+  assert.equal(report.activeDays, 5);
+  assert.equal(report.dailyAverageRevenue, 4206);
+  assert.equal(report.bestDay.date, "2026-07-06");
+  assert.equal(report.bestDay.revenue, 9450);
+  assert.equal(report.largestOrder.orderNumber, "103-001");
 });
 
 test("accepts tabular JSON, TSV, and flags unreadable file formats", async () => {

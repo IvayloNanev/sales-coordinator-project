@@ -43,7 +43,13 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   };
 
   return (
-    <div className={`intake-layout${reviewVisible ? " has-review" : ""}`}>
+    <div
+      className={`intake-layout${reviewVisible ? " has-review" : ""}${isDragging ? " page-dragging" : ""}`}
+      onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }}
+      onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; setIsDragging(true); }}
+      onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setIsDragging(false); }}
+      onDrop={handleDrop}
+    >
       <section className="panel intake-upload" aria-labelledby="files-title">
         <div className="intake-heading">
           <p className="eyebrow">Weekly sales intake</p>
@@ -52,10 +58,6 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
         </div>
         <label
           className={`drop-zone hero-drop-zone${isDragging ? " dragging" : ""}${filesReady ? " has-files" : ""}`}
-          onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }}
-          onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; setIsDragging(true); }}
-          onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setIsDragging(false); }}
-          onDrop={handleDrop}
         >
           <span className="upload-icon" aria-hidden="true">{isValidating ? "···" : filesReady ? "✓" : "⇧"}</span>
           <strong>{isDragging ? "Drop any files here" : isValidating ? "Reading and validating…" : filesReady ? `${files.length} ${files.length === 1 ? "file" : "files"} ready` : "Drag & drop any sales files"}</strong>
