@@ -9,9 +9,8 @@ import { calculateReport, getDateRange, parseCsvFile, recordsToCsv, validateReco
 
 const initialState = { startDate: "", endDate: "", files: [] };
 
-const scrollTo = (id) => window.requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }));
-
 export default function Home() {
+  const [page, setPage] = useState("upload");
   const [setup, setSetup] = useState(initialState);
   const [validation, setValidation] = useState(null);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -19,58 +18,51 @@ export default function Home() {
   const [reportReady, setReportReady] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const report = useMemo(() => calculateReport(validation?.validRecords ?? []), [validation]);
+  const reviewReady = Boolean(validation?.validRecords.length && setup.startDate && setup.endDate);
 
-  const resetResults = () => {
-    setValidation(null);
-    setReportReady(false);
-  };
+  const analyzeFiles = async (files) => {
+    if (!files.length) {
+      setSetup(initialState);
+      setValidation(null);
+      setTotalRecords(0);
+      setReportReady(false);
+      return;
+    }
 
-  const getRangeFromFiles = async (files) => {
-    if (!files.length) return null;
-    const parsed = await Promise.all(files.map(parseCsvFile));
-    return getDateRange(parsed.flatMap((file) => file.records));
-  };
-
-  const addFiles = async (incoming) => {
-    const csvFiles = incoming.filter((file) => file.name.toLowerCase().endsWith(".csv"));
-    const files = [...setup.files, ...csvFiles.filter((file) => !setup.files.some((existing) => existing.name === file.name && existing.size === file.size))];
-    const range = await getRangeFromFiles(files);
-    setSetup((current) => ({ ...current, files, ...(range ?? {}) }));
-    resetResults();
-    return range;
-  };
-
-  const updateDate = (key, value) => {
-    setSetup((current) => ({ ...current, [key]: value }));
-    resetResults();
-  };
-
-  const removeFile = async (file) => {
-    const files = setup.files.filter((item) => item !== file);
-    const range = await getRangeFromFiles(files);
-    setSetup((current) => ({ ...current, files, startDate: range?.startDate ?? "", endDate: range?.endDate ?? "" }));
-    resetResults();
-  };
-
-  const runValidation = async () => {
     setIsValidating(true);
     try {
-      const parsed = await Promise.all(setup.files.map(parseCsvFile));
+      const parsed = await Promise.all(files.map(parseCsvFile));
       const records = parsed.flatMap((file) => file.records);
+      const range = getDateRange(records);
       const results = validateRecords(records, parsed.flatMap((file) => file.fileErrors));
+      setSetup({ files, startDate: range?.startDate ?? "", endDate: range?.endDate ?? "" });
       setTotalRecords(records.length);
       setValidation(results);
       setReportReady(false);
-      scrollTo("validate");
     } finally {
       setIsValidating(false);
     }
   };
 
+  const addFiles = async (incoming) => {
+    const csvFiles = incoming.filter((file) => file.name.toLowerCase().endsWith(".csv"));
+    const files = [...setup.files, ...csvFiles.filter((file) => !setup.files.some((existing) => existing.name === file.name && existing.size === file.size))];
+    await analyzeFiles(files);
+  };
+
+  const removeFile = async (file) => analyzeFiles(setup.files.filter((item) => item !== file));
+
+  const navigate = (destination) => {
+    if (destination === "review" && !reviewReady) return;
+    setPage(destination);
+    if (destination === "upload") setReportReady(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const generateReport = () => {
     setGeneratedDate(new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date()));
     setReportReady(true);
-    scrollTo("report");
+    window.requestAnimationFrame(() => document.getElementById("generated-report")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   };
 
   const restart = () => {
@@ -78,7 +70,8 @@ export default function Home() {
     setValidation(null);
     setTotalRecords(0);
     setReportReady(false);
-    scrollTo("workspace");
+    setPage("upload");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const downloadCleanedData = () => {
@@ -95,35 +88,29 @@ export default function Home() {
 
   return (
     <div className="app-shell">
-      <ProgressHeader validationReady={Boolean(validation)} reportReady={reportReady} />
-      <main id="main">
-        <div className="workflow" id="workspace">
-          <section className="workflow-section" id="upload" aria-labelledby="upload-title">
-            <div className="section-kicker"><span>01</span><div><p>Prepare</p><h2 id="upload-title">Set up your report</h2></div></div>
-            <ReportSetup {...setup} onDates={updateDate} onFiles={addFiles} onRemove={removeFile} onValidate={runValidation} />
+      <ProgressHeader page={page} reviewReady={reviewReady} onNavigate={navigate} />
+      <main id="main" className="two-page-main">
+        {page === "upload" ? (
+          <section className="page-view intake-page" aria-label="Upload and validate sales files">
+            <ReportSetup {...setup} validation={validation} totalRecords={totalRecords} isValidating={isValidating} onFiles={addFiles} onRemove={removeFile} onContinue={() => navigate("review")} />
           </section>
-
-          <section className={`workflow-section${validation ? " revealed" : " locked"}`} id="validate" aria-labelledby="validate-title">
-            <div className="section-kicker"><span>02</span><div><p>Quality check</p><h2 id="validate-title">Review validation</h2></div>{validation && <span className="section-status">Complete</span>}</div>
-            {validation ? (
-              <ValidationResults fileCount={setup.files.length} totalRecords={totalRecords} results={validation} onContinue={generateReport} onReturn={() => scrollTo("upload")} />
-            ) : (
-              <div className="locked-card"><span aria-hidden="true">02</span><div><strong>Validation appears here</strong><p>Add your store files above, then select “Validate data.”</p></div></div>
-            )}
+        ) : (
+          <section className="page-view review-page" aria-labelledby="review-title">
+            <header className="review-hero">
+              <div><p className="eyebrow">Final quality check</p><h1 id="review-title">Review files, then build the report.</h1><p>Confirm what came in and inspect any excluded rows before creating the manager-ready summary.</p></div>
+              <div className="review-period"><small>Reporting period</small><strong>{setup.startDate}</strong><span>to</span><strong>{setup.endDate}</strong></div>
+            </header>
+            <div className="review-file-strip panel">
+              <div><small>Source files</small><strong>{setup.files.length} CSV {setup.files.length === 1 ? "file" : "files"}</strong></div>
+              <ul>{setup.files.map((file) => <li key={`${file.name}-${file.lastModified}`}><span>CSV</span>{file.name}<small>{Math.max(1, Math.round(file.size / 1024))} KB</small></li>)}</ul>
+            </div>
+            <ValidationResults fileCount={setup.files.length} totalRecords={totalRecords} results={validation} onContinue={generateReport} onReturn={() => navigate("upload")} />
+            {reportReady && <div id="generated-report" className="generated-report"><ReportDashboard report={report} startDate={setup.startDate} endDate={setup.endDate} generatedDate={generatedDate} onDownload={downloadCleanedData} onRestart={restart} /></div>}
           </section>
-
-          <section className={`workflow-section${reportReady ? " revealed" : " locked"}`} id="report" aria-labelledby="report-section-title">
-            <div className="section-kicker"><span>03</span><div><p>Results</p><h2 id="report-section-title">Explore your report</h2></div>{reportReady && <span className="section-status">Ready</span>}</div>
-            {reportReady ? (
-              <ReportDashboard report={report} startDate={setup.startDate} endDate={setup.endDate} generatedDate={generatedDate} onDownload={downloadCleanedData} onRestart={restart} />
-            ) : (
-              <div className="locked-card"><span aria-hidden="true">03</span><div><strong>Your dashboard is waiting</strong><p>Validate the source data first, then generate the final report right here.</p></div></div>
-            )}
-          </section>
-        </div>
-        {isValidating && <div className="loading-overlay" role="status"><span />Checking every row…</div>}
+        )}
       </main>
-      <footer className="site-footer no-print"><strong>Sales Report Assistant</strong><span>Private by design · Processed locally in your browser</span><a href="#main">Back to top ↑</a></footer>
+      <footer className="site-footer no-print"><strong>Salescraft</strong><span>Private by design · Processed locally in your browser</span><button type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>Back to top ↑</button></footer>
+      {isValidating && <div className="loading-overlay" role="status"><span />Reading dates and checking every row…</div>}
     </div>
   );
 }

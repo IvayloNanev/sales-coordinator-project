@@ -1,26 +1,32 @@
 const steps = [
-  { label: "Setup", href: "#upload", number: "01" },
-  { label: "Validate", href: "#validate", number: "02" },
-  { label: "Report", href: "#report", number: "03" },
+  { label: "Upload & validate", number: "01" },
+  { label: "Review & report", number: "02" },
 ];
 
-export default function ProgressHeader({ validationReady, reportReady }) {
-  const available = [true, validationReady, reportReady];
-  const activeIndex = reportReady ? 2 : validationReady ? 1 : 0;
+export default function ProgressHeader({ page, reviewReady, onNavigate }) {
+  const activeIndex = page === "review" ? 1 : 0;
+  const available = [true, reviewReady];
+
   return (
     <header className="app-header no-print">
-      <a className="brand" href="#main" aria-label="Sales Report Assistant home">
+      <button className="brand brand-button" type="button" onClick={() => onNavigate("upload")} aria-label="Salescraft home">
         <span className="brand-mark" aria-hidden="true">S</span>
         <span>Sales<span>craft</span></span>
-      </a>
-      <nav className="progress" aria-label="Report workflow">
-        {steps.map((step, index) => {
-          const className = `${available[index] ? "available" : "locked"}${activeIndex === index ? " active" : ""}`;
-          const content = <><span aria-hidden="true">{available[index] && index > 0 ? "✓" : step.number}</span>{step.label}</>;
-          return available[index]
-            ? <a className={className} href={step.href} aria-current={activeIndex === index ? "step" : undefined} key={step.href}>{content}</a>
-            : <span className={className} aria-disabled="true" key={step.href}>{content}</span>;
-        })}
+      </button>
+      <nav className="progress two-step-progress" aria-label="Report workflow">
+        {steps.map((step, index) => (
+          <button
+            type="button"
+            className={`${available[index] ? "available" : "locked"}${activeIndex === index ? " active" : ""}`}
+            disabled={!available[index]}
+            onClick={() => onNavigate(index ? "review" : "upload")}
+            aria-current={activeIndex === index ? "step" : undefined}
+            key={step.number}
+          >
+            <span aria-hidden="true">{index < activeIndex ? "✓" : step.number}</span>
+            {step.label}
+          </button>
+        ))}
       </nav>
       <div className="privacy-note"><span aria-hidden="true" /> Local & private</div>
     </header>
