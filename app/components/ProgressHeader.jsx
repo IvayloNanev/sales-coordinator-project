@@ -1,11 +1,11 @@
 const steps = [
-  { label: "Upload & validate", number: "01" },
-  { label: "Review & report", number: "02" },
+  { label: "Upload & review", number: "01" },
+  { label: "Results", number: "02" },
 ];
 
-export default function ProgressHeader({ page, reviewReady, onNavigate }) {
-  const activeIndex = page === "review" ? 1 : 0;
-  const available = [true, reviewReady];
+export default function ProgressHeader({ page, resultsReady, onNavigate }) {
+  const activeIndex = page === "results" ? 1 : 0;
+  const available = [true, resultsReady];
 
   return (
     <header className="app-header no-print">
@@ -19,7 +19,7 @@ export default function ProgressHeader({ page, reviewReady, onNavigate }) {
             type="button"
             className={`${available[index] ? "available" : "locked"}${activeIndex === index ? " active" : ""}`}
             disabled={!available[index]}
-            onClick={() => onNavigate(index ? "review" : "upload")}
+            onClick={() => onNavigate(index ? "results" : "upload")}
             aria-current={activeIndex === index ? "step" : undefined}
             key={step.number}
           >

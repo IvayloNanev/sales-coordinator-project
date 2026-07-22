@@ -6,7 +6,7 @@ const formatPeriod = (startDate, endDate) => {
   return `${format(startDate)} – ${format(endDate)}`;
 };
 
-export default function ReportSetup({ startDate, endDate, files, validation, totalRecords, isValidating, onFiles, onRemove, onContinue }) {
+export default function ReportSetup({ startDate, endDate, files, validation, totalRecords, isValidating, onFiles, onRemove, onProduceResults }) {
   const [fileNotice, setFileNotice] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const filesReady = files.length > 0;
@@ -42,8 +42,8 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
       <section className="panel intake-upload" aria-labelledby="files-title">
         <div className="intake-heading">
           <p className="eyebrow">Weekly sales intake</p>
-          <h1 id="files-title">Drop the files.<br />We’ll do the checking.</h1>
-          <p>Add every store CSV at once. Salescraft reads the date range, checks every row, and prepares a clean review automatically.</p>
+          <h1 id="files-title">Drop the files.<br />Get the results.</h1>
+          <p>Add every store CSV at once. Salescraft reads the date range, reviews every row automatically, and gets your clean report ready.</p>
         </div>
         <label
           className={`drop-zone hero-drop-zone${isDragging ? " dragging" : ""}${filesReady ? " has-files" : ""}`}
@@ -79,7 +79,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
           <div><small>Automatic validation</small><strong>{isValidating ? "Checking every row…" : validation ? `${validation.validRecords.length} of ${totalRecords} rows ready` : "Starts after upload"}</strong></div>
           {validation && <div className="validation-mini"><span>{validation.invalidRecords.length} issues</span><span>{validation.duplicateRecords} duplicates</span></div>}
         </div>
-        <button className="button primary full continue-button" type="button" disabled={!ready} onClick={onContinue}>Review files <span aria-hidden="true">→</span></button>
+        <button className="button primary full continue-button" type="button" disabled={!ready} onClick={onProduceResults}>Produce results <span aria-hidden="true">→</span></button>
         {!ready && <p className="disabled-hint">Upload at least one CSV with valid dated rows to continue.</p>}
       </aside>
     </div>
