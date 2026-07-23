@@ -43,14 +43,6 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
           <h1 id="files-title">Turn sales files into<br /><em>validated weekly reports.</em></h1>
           <p>Combine multiple sources, catch incomplete or duplicate records, and generate a decision-ready performance report.</p>
         </div>
-        <label
-          className={`drop-zone hero-drop-zone${isDragging ? " dragging" : ""}${filesReady ? " has-files" : ""}`}
-        >
-          <span className="upload-icon" aria-hidden="true">{isValidating ? "···" : filesReady ? "✓" : "⇧"}</span>
-          <strong>{isDragging ? "Drop supported files here" : isValidating ? "Reading and validating…" : filesReady ? `${countLabel(files.length, "file")} ready` : "Drag & drop supported sales files"}</strong>
-          <span>{filesReady ? "Drop more files or click to browse" : "or click to choose multiple files"}</span>
-          <input type="file" multiple accept=".csv,.xlsx,.xls,.xlsm,.ods,.json,.tsv,.tab,.psv,.txt,.dat,.pdf" onChange={(event) => { addSelectedFiles([...event.target.files]); event.currentTarget.value = ""; }} />
-        </label>
         <section className="file-guidance" aria-labelledby="file-guidance-title">
           <div className="file-guidance-head">
             <div><p className="section-number">File requirements</p><h2 id="file-guidance-title">Start with the expected sales schema.</h2></div>
@@ -63,6 +55,14 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
             </ul>
           </details>
         </section>
+        <label
+          className={`drop-zone hero-drop-zone${isDragging ? " dragging" : ""}${filesReady ? " has-files" : ""}`}
+        >
+          <span className="upload-icon" aria-hidden="true">{isValidating ? "···" : filesReady ? "✓" : "⇧"}</span>
+          <strong>{isDragging ? "Drop supported files here" : isValidating ? "Reading and validating…" : filesReady ? `${countLabel(files.length, "file")} ready` : "Drag & drop supported sales files"}</strong>
+          <span>{filesReady ? "Drop more files or click to browse" : "or click to choose multiple files"}</span>
+          <input type="file" multiple accept=".csv,.xlsx,.xls,.xlsm,.ods,.json,.tsv,.tab,.psv,.txt,.dat,.pdf" onChange={(event) => { addSelectedFiles([...event.target.files]); event.currentTarget.value = ""; }} />
+        </label>
       </section>
 
       {reviewVisible && <aside className="intake-status incoming-audit" aria-label="Automatic incoming data review">

@@ -2561,7 +2561,7 @@ input:focus-visible,
 
 /* Make the accepted data contract visible before a coordinator uploads files. */
 .file-guidance {
-  margin-top: 18px;
+  margin: 18px 0;
   padding: 18px 20px;
   border: 1px solid rgba(177, 138, 67, .42);
   border-radius: 18px;
