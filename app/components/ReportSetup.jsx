@@ -6,6 +6,8 @@ const formatPeriod = (startDate, endDate) => {
   return `${format(startDate)} – ${format(endDate)}`;
 };
 
+const countLabel = (count, singular, plural = `${singular}s`) => `${count} ${count === 1 ? singular : plural}`;
+
 export default function ReportSetup({ startDate, endDate, files, validation, totalRecords, intakeAnalysis, report, isValidating, onFiles, onProduceResults }) {
   const [isDragging, setIsDragging] = useState(false);
   const filesReady = files.length > 0;
@@ -45,10 +47,23 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
           className={`drop-zone hero-drop-zone${isDragging ? " dragging" : ""}${filesReady ? " has-files" : ""}`}
         >
           <span className="upload-icon" aria-hidden="true">{isValidating ? "···" : filesReady ? "✓" : "⇧"}</span>
-          <strong>{isDragging ? "Drop any files here" : isValidating ? "Reading and validating…" : filesReady ? `${files.length} ${files.length === 1 ? "file" : "files"} ready` : "Drag & drop any sales files"}</strong>
+          <strong>{isDragging ? "Drop supported files here" : isValidating ? "Reading and validating…" : filesReady ? `${countLabel(files.length, "file")} ready` : "Drag & drop supported sales files"}</strong>
           <span>{filesReady ? "Drop more files or click to browse" : "or click to choose multiple files"}</span>
-          <input type="file" multiple onChange={(event) => { addSelectedFiles([...event.target.files]); event.currentTarget.value = ""; }} />
+          <input type="file" multiple accept=".csv,.xlsx,.xls,.xlsm,.ods,.json,.tsv,.tab,.psv,.txt,.dat,.pdf" onChange={(event) => { addSelectedFiles([...event.target.files]); event.currentTarget.value = ""; }} />
         </label>
+        <section className="file-guidance" aria-labelledby="file-guidance-title">
+          <div className="file-guidance-head">
+            <div><p className="section-number">File requirements</p><h2 id="file-guidance-title">Start with the expected sales schema.</h2></div>
+            <a className="template-link" href="/sample-files/sales-template.csv" download>Download CSV template <span aria-hidden="true">↓</span></a>
+          </div>
+          <p><strong>Supported formats:</strong> CSV, Excel, JSON, TSV, pipe-delimited text, and table-based PDF.</p>
+          <details>
+            <summary>View 10 required columns <span aria-hidden="true">+</span></summary>
+            <ul>
+              {["Date", "Store ID", "Store name", "Order number", "Customer name", "Product", "Product category", "Sales region", "Quantity sold", "Revenue"].map((column) => <li key={column}>{column}</li>)}
+            </ul>
+          </details>
+        </section>
       </section>
 
       {reviewVisible && <aside className="intake-status incoming-audit" aria-label="Automatic incoming data review">
@@ -74,8 +89,8 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
 
             <div className="incoming-audit-grid">
               <section className="source-ledger" aria-labelledby="source-ledger-title">
-                <div className="incoming-section-head"><h3 id="source-ledger-title">Sources</h3><small>{intakeAnalysis.files.length} files</small></div>
-                <div className="table-wrap"><table><thead><tr><th>Source</th><th>Extracted</th><th>Valid</th><th>Orders</th><th>Revenue</th><th>Status</th></tr></thead><tbody>{intakeAnalysis.files.map((item, index) => <tr key={`${item.name}-${index}`}><td><span className="source-name"><b>{item.type}</b><span><strong>{item.name}</strong><small>{Math.max(1, Math.round(item.size / 1024))} KB · {item.startDate ? `${item.startDate}—${item.endDate}` : "No date range"}</small></span></span></td><td>{item.extractedRows}</td><td>{item.validRows}</td><td>{item.orders}</td><td>{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(item.revenue)}</td><td><span className={`source-status ${item.issues ? "flag" : "pass"}`}>{item.issues ? `${item.issues} issues` : "Ready"}</span></td></tr>)}</tbody></table></div>
+                <div className="incoming-section-head"><h3 id="source-ledger-title">Sources</h3><small>{countLabel(intakeAnalysis.files.length, "file")}</small></div>
+                <div className="table-wrap"><table><thead><tr><th>Source</th><th>Extracted</th><th>Valid</th><th>Orders</th><th>Revenue</th><th>Status</th></tr></thead><tbody>{intakeAnalysis.files.map((item, index) => <tr key={`${item.name}-${index}`}><td><span className="source-name"><b>{item.type}</b><span><strong>{item.name}</strong><small>{Math.max(1, Math.round(item.size / 1024))} KB · {item.startDate ? `${item.startDate}—${item.endDate}` : "No date range"}</small></span></span></td><td>{item.extractedRows}</td><td>{item.validRows}</td><td>{item.orders}</td><td>{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(item.revenue)}</td><td><span className={`source-status ${item.issues ? "flag" : "pass"}`}>{item.issues ? countLabel(item.issues, "issue") : "Ready"}</span></td></tr>)}</tbody></table></div>
               </section>
 
               <section className="schema-audit" aria-labelledby="schema-audit-title">
@@ -93,7 +108,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
             ) : (
               <div className="all-clear-strip"><span aria-hidden="true">✓</span><div><strong>No errors found</strong><small>Every row will be included in the report.</small></div></div>
             )}
-            <section className="coordinator-readiness" aria-label="Sales coordinator readiness checks"><div><span className={startDate && endDate ? "pass" : "flag"}>{startDate && endDate ? "✓" : "!"}</span><p><strong>Reporting period</strong><small>{startDate && endDate ? "Dates detected and normalized" : "A valid date range is missing"}</small></p></div><div><span className={validation.duplicateRecords ? "flag" : "pass"}>{validation.duplicateRecords ? "!" : "✓"}</span><p><strong>Order identity</strong><small>{validation.duplicateRecords ? `${validation.duplicateRecords} duplicate order rows require attention` : "Order numbers are unique"}</small></p></div><div><span className={report.customerCount ? "pass" : "flag"}>{report.customerCount ? "✓" : "!"}</span><p><strong>Customer records</strong><small>{report.customerCount ? `${report.customerCount} customer accounts detected` : "Customer attribution is missing"}</small></p></div><div><span className={validation.validRecords.length ? "pass" : "flag"}>{validation.validRecords.length ? "✓" : "!"}</span><p><strong>Report eligibility</strong><small>{validation.validRecords.length ? `${validation.validRecords.length} rows will flow into results` : "No valid rows can be reported"}</small></p></div></section>
+            <section className="coordinator-readiness" aria-label="Sales coordinator readiness checks"><div><span className={startDate && endDate ? "pass" : "flag"}>{startDate && endDate ? "✓" : "!"}</span><p><strong>Reporting period</strong><small>{startDate && endDate ? "Dates detected and normalized" : "A valid date range is missing"}</small></p></div><div><span className={validation.duplicateRecords ? "flag" : "pass"}>{validation.duplicateRecords ? "!" : "✓"}</span><p><strong>Order identity</strong><small>{validation.duplicateRecords ? `${countLabel(validation.duplicateRecords, "duplicate row")} excluded; first valid order kept` : "Order numbers are unique"}</small></p></div><div><span className={report.customerCount ? "pass" : "flag"}>{report.customerCount ? "✓" : "!"}</span><p><strong>Customer records</strong><small>{report.customerCount ? `${countLabel(report.customerCount, "customer account")} detected` : "Customer name is required for every row"}</small></p></div><div><span className={validation.validRecords.length ? "pass" : "flag"}>{validation.validRecords.length ? "✓" : "!"}</span><p><strong>Report eligibility</strong><small>{validation.validRecords.length ? `${countLabel(validation.validRecords.length, "row")} will flow into results` : "No valid rows can be reported"}</small></p></div></section>
           </section>
         <button className="button full continue-button" type="button" disabled={!ready} onClick={onProduceResults}><span>Publish weekly report</span><span className="continue-button-icon" aria-hidden="true">→</span></button>
         {!ready && <p className="disabled-hint">Upload at least one file with a readable sales table and valid dated rows to continue.</p>}

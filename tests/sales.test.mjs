@@ -28,18 +28,29 @@ test("groups by store and region in descending revenue order", () => {
   ]);
 });
 
-test("detects duplicates and invalid records", () => {
-  const base = { date: "2026-07-06", storeId: "101", storeName: "Downtown", product: "Desk", productCategory: "Furniture", salesRegion: "North", quantitySold: "1", revenue: "100", sourceFile: "test.csv", rowNumber: 2 };
+test("keeps the first valid order and excludes later duplicates and invalid records", () => {
+  const base = { date: "2026-07-06", storeId: "101", storeName: "Downtown", customerName: "Acme", product: "Desk", productCategory: "Furniture", salesRegion: "North", quantitySold: "1", revenue: "100", sourceFile: "test.csv", rowNumber: 2 };
   const result = validateRecords([
     { ...base, orderNumber: "DUP-1" },
     { ...base, orderNumber: "DUP-1", rowNumber: 3 },
     { ...base, orderNumber: "BAD-1", rowNumber: 4, quantitySold: "-2", salesRegion: "" },
   ]);
-  assert.equal(result.duplicateRecords, 2);
-  assert.equal(result.validRecords.length, 0);
-  assert.ok(result.invalidRecords.some((record) => record.error === "Duplicate order number"));
+  assert.equal(result.duplicateRecords, 1);
+  assert.equal(result.validRecords.length, 1);
+  assert.equal(result.validRecords[0].rowNumber, 2);
+  assert.ok(result.invalidRecords.some((record) => record.error === "Duplicate order number; first valid occurrence kept"));
   assert.ok(result.invalidRecords.some((record) => record.error === "Quantity must be a positive number"));
   assert.ok(result.invalidRecords.some((record) => record.error === "Missing sales region"));
+});
+
+test("requires customer names on every reportable row", () => {
+  const result = validateRecords([{
+    date: "2026-07-06", storeId: "101", storeName: "Downtown", orderNumber: "A-1", customerName: "",
+    product: "Desk", productCategory: "Furniture", salesRegion: "North", quantitySold: "1", revenue: "100",
+    sourceFile: "test.csv", rowNumber: 2,
+  }]);
+  assert.equal(result.validRecords.length, 0);
+  assert.ok(result.invalidRecords.some((record) => record.error === "Missing customer name"));
 });
 
 test("handles empty input safely", () => {
@@ -76,20 +87,20 @@ test("sample files produce the manually verified totals", async () => {
   const result = validateRecords(records, parsed.flatMap((file) => file.fileErrors));
   const report = calculateReport(result.validRecords);
   assert.equal(records.length, 30);
-  assert.equal(result.validRecords.length, 25);
-  assert.equal(result.duplicateRecords, 2);
-  assert.equal(report.totalRevenue, 21030);
-  assert.equal(report.totalUnits, 99);
-  assert.equal(report.uniqueOrders, 25);
-  assert.equal(report.averageOrderValue, 841.2);
+  assert.equal(result.validRecords.length, 26);
+  assert.equal(result.duplicateRecords, 1);
+  assert.equal(report.totalRevenue, 21390);
+  assert.equal(report.totalUnits, 102);
+  assert.equal(report.uniqueOrders, 26);
+  assert.equal(report.averageOrderValue, 21390 / 26);
   assert.equal(report.highestRevenueStore, "Westgate");
   assert.equal(report.highestRevenueRegion, "West");
   assert.equal(report.highestRevenueProduct, "Ergonomic Chair");
   assert.equal(report.topSellingProduct, "Wireless Mouse");
-  assert.equal(report.customerCount, 25);
-  assert.equal(report.medianOrderValue, 630);
+  assert.equal(report.customerCount, 26);
+  assert.equal(report.medianOrderValue, 615);
   assert.equal(report.activeDays, 5);
-  assert.equal(report.dailyAverageRevenue, 4206);
+  assert.equal(report.dailyAverageRevenue, 4278);
   assert.equal(report.bestDay.date, "2026-07-06");
   assert.equal(report.bestDay.revenue, 9450);
   assert.equal(report.largestOrder.orderNumber, "103-001");

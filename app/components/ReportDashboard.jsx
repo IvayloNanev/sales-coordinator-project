@@ -8,6 +8,7 @@ function DataTable({ columns, rows, label }) {
 }
 
 const shortDate = (value) => value ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`)) : "—";
+const countLabel = (count, singular, plural = `${singular}s`) => `${count} ${count === 1 ? singular : plural}`;
 
 function DailyRevenueChart({ days }) {
   const visible = days.slice(-14);
@@ -53,27 +54,27 @@ export default function ReportDashboard({ report, startDate, endDate, generatedD
   };
 
   const actions = [
-    { label: "Key account", title: report.topCustomer?.customerName ?? "No customer data", detail: report.topCustomer ? `${percent(report.topCustomerRevenueShare)} of revenue · ${report.topCustomer.orders} orders` : "Add customer names to identify account concentration." },
+    { label: "Key account", title: report.topCustomer?.customerName ?? "No customer data", detail: report.topCustomer ? `${percent(report.topCustomerRevenueShare)} of revenue · ${countLabel(report.topCustomer.orders, "order")}` : "Add customer names to identify account concentration." },
     { label: "Inventory signal", title: report.topSellingProduct, detail: `${report.products.find((product) => product.product === report.topSellingProduct)?.units ?? 0} units sold; confirm stock and fulfillment coverage.` },
     { label: "Regional focus", title: report.highestRevenueRegion, detail: `${money(report.regions[0]?.revenue ?? 0)} in revenue; share the winning mix across other regions.` },
-    { label: issueCount ? "Data follow-up" : "CRM hygiene", title: issueCount ? `${issueCount} issues excluded` : "Source data passed", detail: issueCount ? `${duplicateRecords} duplicate rows detected; correct source records before the next report.` : "Customer, order, product, store, region, and date fields are report-ready." },
+    { label: issueCount ? "Data follow-up" : "CRM hygiene", title: issueCount ? `${countLabel(issueCount, "issue")} excluded` : "Source data passed", detail: issueCount ? `${countLabel(duplicateRecords, "duplicate row")} excluded; the first valid occurrence of each order was kept.` : "Customer, order, product, store, region, and date fields are report-ready." },
   ];
 
   return (
     <section className="report-shell expanded-report" aria-labelledby="report-title">
-      <header className="report-heading report-heading-expanded"><div><p className="issue-line">{shortDate(startDate)} — {shortDate(endDate)}</p><h3 id="report-title">Weekly sales<br /><em>performance.</em></h3></div><div className="generated-meta"><strong>{generatedDate}</strong><small>{fileCount} files · {report.activeDays} active days</small></div></header>
+      <header className="report-heading report-heading-expanded"><div><p className="issue-line">{shortDate(startDate)} — {shortDate(endDate)}</p><h3 id="report-title">Weekly sales<br /><em>performance.</em></h3></div><div className="generated-meta"><strong>{generatedDate}</strong><small>{countLabel(fileCount, "file")} · {countLabel(report.activeDays, "active day")}</small></div></header>
 
-      <section className="report-quality-strip" aria-label="Source data coverage"><div><span className="ready-dot" /><strong>{percent(cleanRate)} clean row coverage</strong></div><p>{validRowCount} valid rows from {totalRecords} received{excluded ? ` · ${excluded} rows excluded` : " · no rows excluded"}</p></section>
+      <section className="report-quality-strip" aria-label="Source data coverage"><div><span className="ready-dot" /><strong>{percent(cleanRate)} clean row coverage</strong></div><p>{countLabel(validRowCount, "valid row")} from {totalRecords} received{excluded ? ` · ${countLabel(excluded, "row")} excluded` : " · no rows excluded"}</p></section>
 
       <div className="metric-grid metric-grid-expanded">
         <MetricCard featured label="Total revenue" value={money(report.totalRevenue)} note={`${money(report.dailyAverageRevenue)} per active day`} />
-        <MetricCard label="Orders" value={report.uniqueOrders.toLocaleString()} note={`${report.activeDays} active sales days`} />
+        <MetricCard label="Orders" value={report.uniqueOrders.toLocaleString()} note={countLabel(report.activeDays, "active sales day")} />
         <MetricCard label="Units sold" value={report.totalUnits.toLocaleString()} note={`${report.unitsPerOrder.toFixed(1)} per order`} />
         <MetricCard label="Average order" value={money(report.averageOrderValue)} note={`Median ${money(report.medianOrderValue)}`} />
-        <MetricCard label="Customers" value={report.customerCount.toLocaleString()} note={`${report.repeatCustomerCount} repeat`} />
+        <MetricCard label="Customers" value={report.customerCount.toLocaleString()} note={countLabel(report.repeatCustomerCount, "repeat customer")} />
         <MetricCard label="Repeat rate" value={percent(report.repeatCustomerRate)} note="Customers with 2+ orders" />
         <MetricCard label="Revenue / customer" value={money(report.averageRevenuePerCustomer)} note={`${money(report.revenuePerUnit)} per unit`} />
-        <MetricCard label="Stores" value={report.storeCount} note={`${report.regions.length} sales regions`} />
+        <MetricCard label="Stores" value={report.storeCount} note={countLabel(report.regions.length, "sales region")} />
       </div>
 
       <div className="report-overview-grid">
@@ -83,7 +84,7 @@ export default function ReportDashboard({ report, startDate, endDate, generatedD
 
       <div className="report-secondary-grid">
         <section className="analysis-panel" aria-labelledby="region-performance-title"><div className="card-heading"><h4 id="region-performance-title">Regions</h4><span>{report.regions.length} total</span></div><RankedBars rows={report.regions} labelKey="salesRegion" /></section>
-        <section className="analysis-panel" aria-labelledby="category-mix-title"><div className="card-heading"><h4 id="category-mix-title">Category mix</h4><span>{report.products.length} products</span></div><CategoryMix categories={report.categories} totalRevenue={report.totalRevenue} /></section>
+        <section className="analysis-panel" aria-labelledby="category-mix-title"><div className="card-heading"><h4 id="category-mix-title">Category mix</h4><span>{countLabel(report.categories.length, "category", "categories")}</span></div><CategoryMix categories={report.categories} totalRevenue={report.totalRevenue} /></section>
       </div>
 
       <div className="report-insight-grid">

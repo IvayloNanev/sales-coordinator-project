@@ -2558,3 +2558,102 @@ input:focus-visible,
     inset 0 1px 0 rgba(255, 255, 255, .16),
     0 0 0 4px rgba(177, 138, 67, .12);
 }
+
+/* Make the accepted data contract visible before a coordinator uploads files. */
+.file-guidance {
+  margin-top: 18px;
+  padding: 18px 20px;
+  border: 1px solid rgba(177, 138, 67, .42);
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .38), rgba(242, 226, 192, .2)),
+    rgba(255, 255, 255, .18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .72);
+}
+
+.file-guidance-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.file-guidance h2 {
+  margin: 3px 0 0;
+  color: var(--navy);
+  font: 400 clamp(20px, 2.2vw, 27px)/1.1 Didot, "Bodoni 72", Georgia, serif;
+  letter-spacing: -.02em;
+}
+
+.file-guidance > p {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font: 14px/1.55 Georgia, serif;
+}
+
+.file-guidance > p strong { color: var(--navy); }
+
+.template-link {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border: 1px solid rgba(177, 138, 67, .64);
+  border-radius: 999px;
+  color: #6f501d;
+  background: rgba(255, 251, 238, .54);
+  font: 700 12px/1 system-ui, sans-serif;
+  text-decoration: none;
+  transition: border-color .16s ease, background-color .16s ease;
+}
+
+.template-link:hover {
+  border-color: rgba(177, 138, 67, .92);
+  background: rgba(255, 248, 222, .9);
+}
+
+.template-link:focus-visible {
+  outline: 2px solid rgba(177, 138, 67, .88);
+  outline-offset: 3px;
+}
+
+.file-guidance details {
+  margin-top: 12px;
+  border-top: 1px solid rgba(177, 138, 67, .25);
+}
+
+.file-guidance summary {
+  display: flex;
+  justify-content: space-between;
+  padding: 13px 0 3px;
+  color: var(--navy);
+  cursor: pointer;
+  font: 700 13px/1.35 system-ui, sans-serif;
+  list-style: none;
+}
+
+.file-guidance summary::-webkit-details-marker { display: none; }
+.file-guidance details[open] summary span { transform: rotate(45deg); }
+
+.file-guidance ul {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 11px 0 2px;
+  padding: 0;
+  list-style: none;
+}
+
+.file-guidance li {
+  padding: 8px 9px;
+  border-radius: 9px;
+  color: #4d443c;
+  background: rgba(255, 255, 255, .42);
+  font: 12px/1.25 system-ui, sans-serif;
+}
+
+@media (max-width: 720px) {
+  .file-guidance-head { align-items: flex-start; flex-direction: column; }
+  .file-guidance ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
