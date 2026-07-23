@@ -1,11 +1,9 @@
 import "./globals.css";
-import { headers } from "next/headers";
 
-export async function generateMetadata() {
-  const requestHeaders = await headers();
-  const host = requestHeaders.get("host") || "localhost:3000";
-  const protocol = requestHeaders.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
-  const imageUrl = `${protocol}://${host}/og.png`;
+export function generateMetadata() {
+  const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  const siteUrl = productionHost ? `https://${productionHost}` : "http://localhost:3000";
+  const imageUrl = `${siteUrl}/og.png`;
   const title = "Sales Report Assistant";
   const description = "Consolidate, validate, and print manager-ready weekly sales reports.";
   return {
