@@ -54,7 +54,6 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
         <section className="file-guidance" aria-labelledby="file-guidance-title">
           <div className="file-guidance-head">
             <div><p className="section-number">File requirements</p><h2 id="file-guidance-title">Start with the expected sales schema.</h2></div>
-            <a className="template-link" href="/sample-files/sales-template.csv" download>Download CSV template <span aria-hidden="true">↓</span></a>
           </div>
           <p><strong>Supported formats:</strong> CSV, Excel, JSON, TSV, pipe-delimited text, and table-based PDF.</p>
           <details>

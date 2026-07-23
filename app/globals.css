@@ -2572,10 +2572,7 @@ input:focus-visible,
 }
 
 .file-guidance-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
+  display: block;
 }
 
 .file-guidance h2 {
@@ -2592,31 +2589,6 @@ input:focus-visible,
 }
 
 .file-guidance > p strong { color: var(--navy); }
-
-.template-link {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 14px;
-  border: 1px solid rgba(177, 138, 67, .64);
-  border-radius: 999px;
-  color: #6f501d;
-  background: rgba(255, 251, 238, .54);
-  font: 700 12px/1 system-ui, sans-serif;
-  text-decoration: none;
-  transition: border-color .16s ease, background-color .16s ease;
-}
-
-.template-link:hover {
-  border-color: rgba(177, 138, 67, .92);
-  background: rgba(255, 248, 222, .9);
-}
-
-.template-link:focus-visible {
-  outline: 2px solid rgba(177, 138, 67, .88);
-  outline-offset: 3px;
-}
 
 .file-guidance details {
   margin-top: 12px;
@@ -2654,6 +2626,5 @@ input:focus-visible,
 }
 
 @media (max-width: 720px) {
-  .file-guidance-head { align-items: flex-start; flex-direction: column; }
   .file-guidance ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
