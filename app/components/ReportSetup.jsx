@@ -54,7 +54,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
       {reviewVisible && <aside className="intake-status incoming-audit" aria-label="Automatic incoming data review">
           <section className={`data-review-card panel${flaggedRows ? " has-errors" : " all-clear"}`} aria-labelledby="data-review-title">
             <header className="data-review-head">
-              <div><p className="section-number">01 / Intake</p><h2 id="data-review-title">{flaggedRows ? "Exceptions found" : "Ready to publish"}</h2><p>{flaggedRows ? "Flagged rows stay out of the report until corrected." : "Every received row passed the reporting checks."}</p></div>
+              <div><p className="section-number">01 / Intake</p><h2 id="data-review-title">{flaggedRows ? "Exceptions found" : "Weekly sales report is ready"}</h2><p>{flaggedRows ? "Flagged rows stay out of the report until corrected." : "Every received row passed the reporting checks and is ready to be included."}</p></div>
               <span className={`review-badge ${flaggedRows ? "warning" : "success"}`}>{flaggedRows ? `${flaggedRows} flagged` : "Passed"}</span>
             </header>
 
@@ -95,7 +95,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
             )}
             <section className="coordinator-readiness" aria-label="Sales coordinator readiness checks"><div><span className={startDate && endDate ? "pass" : "flag"}>{startDate && endDate ? "✓" : "!"}</span><p><strong>Reporting period</strong><small>{startDate && endDate ? "Dates detected and normalized" : "A valid date range is missing"}</small></p></div><div><span className={validation.duplicateRecords ? "flag" : "pass"}>{validation.duplicateRecords ? "!" : "✓"}</span><p><strong>Order identity</strong><small>{validation.duplicateRecords ? `${validation.duplicateRecords} duplicate order rows require attention` : "Order numbers are unique"}</small></p></div><div><span className={report.customerCount ? "pass" : "flag"}>{report.customerCount ? "✓" : "!"}</span><p><strong>Customer records</strong><small>{report.customerCount ? `${report.customerCount} customer accounts detected` : "Customer attribution is missing"}</small></p></div><div><span className={validation.validRecords.length ? "pass" : "flag"}>{validation.validRecords.length ? "✓" : "!"}</span><p><strong>Report eligibility</strong><small>{validation.validRecords.length ? `${validation.validRecords.length} rows will flow into results` : "No valid rows can be reported"}</small></p></div></section>
           </section>
-        <button className="button primary full continue-button" type="button" disabled={!ready} onClick={onProduceResults}>Produce results <span aria-hidden="true">→</span></button>
+        <button className="button full continue-button" type="button" disabled={!ready} onClick={onProduceResults}><span>Publish weekly report</span><span className="continue-button-icon" aria-hidden="true">→</span></button>
         {!ready && <p className="disabled-hint">Upload at least one file with a readable sales table and valid dated rows to continue.</p>}
       </aside>}
     </div>
