@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { formatCurrency, generateSummary } from "../../lib/sales";
+import useChartReveal from "../hooks/useChartReveal";
 
 const MetricCard = ({ label, value, note, featured }) => <article className={`metric-card${featured ? " featured" : ""}`}><span>{label}</span><strong>{value}</strong>{note && <small>{note}</small>}</article>;
 
@@ -11,22 +12,25 @@ const shortDate = (value) => value ? new Intl.DateTimeFormat("en-US", { month: "
 const countLabel = (count, singular, plural = `${singular}s`) => `${count} ${count === 1 ? singular : plural}`;
 
 function DailyRevenueChart({ days }) {
+  const revealRef = useChartReveal();
   const visible = days.slice(-14);
   const max = Math.max(...visible.map((day) => day.revenue), 1);
   return (
-    <div className="daily-chart" role="img" aria-label={`Daily revenue for ${visible.length} active sales days`}>
-      <div className="daily-bars">{visible.map((day) => <div className="daily-column" key={day.date}><strong>{formatCurrency(day.revenue)}</strong><div><i style={{ height: `${Math.max(5, (day.revenue / max) * 100)}%` }} /></div><span>{shortDate(day.date)}</span><small>{day.orders} ord.</small></div>)}</div>
+    <div className="daily-chart chart-reveal" ref={revealRef} role="img" aria-label={`Daily revenue for ${visible.length} active sales days`}>
+      <div className="daily-bars">{visible.map((day, index) => <div className="daily-column" style={{ "--chart-index": index }} key={day.date}><strong>{formatCurrency(day.revenue)}</strong><div><i style={{ height: `${Math.max(5, (day.revenue / max) * 100)}%` }} /></div><span>{shortDate(day.date)}</span><small>{day.orders} ord.</small></div>)}</div>
     </div>
   );
 }
 
 function RankedBars({ rows, labelKey, valueKey = "revenue", valueFormatter = formatCurrency }) {
+  const revealRef = useChartReveal();
   const visible = rows.slice(0, 6);
   const max = Math.max(...visible.map((row) => row[valueKey]), 1);
-  return <div className="ranked-bars">{visible.map((row, index) => <div className="ranked-row" key={`${row[labelKey]}-${index}`}><div><span>{String(index + 1).padStart(2, "0")}</span><strong>{row[labelKey]}</strong><b>{valueFormatter(row[valueKey])}</b></div><div><i style={{ width: `${(row[valueKey] / max) * 100}%` }} /></div></div>)}</div>;
+  return <div className="ranked-bars chart-reveal" ref={revealRef}>{visible.map((row, index) => <div className="ranked-row" style={{ "--chart-index": index }} key={`${row[labelKey]}-${index}`}><div><span>{String(index + 1).padStart(2, "0")}</span><strong>{row[labelKey]}</strong><b>{valueFormatter(row[valueKey])}</b></div><div><i style={{ width: `${(row[valueKey] / max) * 100}%` }} /></div></div>)}</div>;
 }
 
 function CategoryMix({ categories, totalRevenue }) {
+  const revealRef = useChartReveal();
   const colors = ["#17365f", "#b88a35", "#315b84", "#d7b86a", "#6f7f91", "#8a6828"];
   const shares = categories.slice(0, 6).map((category) => totalRevenue ? (category.revenue / totalRevenue) * 100 : 0);
   const stops = shares.map((share, index) => {
@@ -35,7 +39,7 @@ function CategoryMix({ categories, totalRevenue }) {
   });
   const covered = shares.reduce((sum, value) => sum + value, 0);
   if (covered < 100) stops.push(`#e7ece9 ${covered}% 100%`);
-  return <div className="mix-layout"><div className="donut" style={{ background: `conic-gradient(${stops.join(", ")})` }} role="img" aria-label="Revenue share by product category"><span><strong>{categories.length}</strong><small>categories</small></span></div><ul>{categories.slice(0, 6).map((category, index) => <li key={category.productCategory}><i style={{ background: colors[index] }} /><span>{category.productCategory}</span><strong>{totalRevenue ? Math.round((category.revenue / totalRevenue) * 100) : 0}%</strong></li>)}</ul></div>;
+  return <div className="mix-layout chart-reveal" ref={revealRef}><div className="donut" style={{ "--donut-background": `conic-gradient(${stops.join(", ")})` }} role="img" aria-label="Revenue share by product category"><span><strong>{categories.length}</strong><small>categories</small></span></div><ul>{categories.slice(0, 6).map((category, index) => <li key={category.productCategory}><i style={{ background: colors[index] }} /><span>{category.productCategory}</span><strong>{totalRevenue ? Math.round((category.revenue / totalRevenue) * 100) : 0}%</strong></li>)}</ul></div>;
 }
 
 export default function ReportDashboard({ report, startDate, endDate, generatedDate, fileCount, totalRecords, validRowCount, issueCount, duplicateRecords, onRestart }) {

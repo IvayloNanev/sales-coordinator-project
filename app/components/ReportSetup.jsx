@@ -1,4 +1,5 @@
 import { useState } from "react";
+import useChartReveal from "../hooks/useChartReveal";
 
 const formatPeriod = (startDate, endDate) => {
   if (!startDate || !endDate) return "Waiting for valid dates";
@@ -10,11 +11,13 @@ const countLabel = (count, singular, plural = `${singular}s`) => `${count} ${cou
 
 export default function ReportSetup({ startDate, endDate, files, validation, totalRecords, intakeAnalysis, report, isValidating, onFiles, onProduceResults }) {
   const [isDragging, setIsDragging] = useState(false);
+  const reviewVisible = Boolean(validation && !isValidating);
+  const snapshotRevealRef = useChartReveal(reviewVisible);
+  const coverageRevealRef = useChartReveal(reviewVisible);
   const filesReady = files.length > 0;
   const periodReady = Boolean(startDate && endDate && startDate <= endDate);
   const validationReady = Boolean(validation && validation.validRecords.length);
   const ready = filesReady && periodReady && validationReady && !isValidating;
-  const reviewVisible = Boolean(validation && !isValidating);
   const flaggedRows = validation
     ? new Set(validation.invalidRecords.map((record) => `${record.sourceFile}-${record.rowNumber}`)).size
     : 0;
@@ -81,7 +84,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
               <div><dt>Date range</dt><dd className="fact-date">{formatPeriod(startDate, endDate)}</dd></div>
             </dl>
 
-            <section className="incoming-sales-snapshot" aria-labelledby="incoming-sales-title">
+            <section className="incoming-sales-snapshot chart-reveal" ref={snapshotRevealRef} aria-labelledby="incoming-sales-title">
               <div className="incoming-section-head"><h3 id="incoming-sales-title">The week at a glance</h3><small>Valid rows</small></div>
               <dl><div><dt>Revenue</dt><dd>{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(report.totalRevenue)}</dd></div><div><dt>Orders</dt><dd>{report.uniqueOrders}</dd></div><div><dt>Units</dt><dd>{report.totalUnits}</dd></div><div><dt>Customers</dt><dd>{report.customerCount}</dd></div><div><dt>Products</dt><dd>{report.products.length}</dd></div><div><dt>Stores / regions</dt><dd>{report.storeCount} / {report.regions.length}</dd></div></dl>
             </section>
@@ -92,9 +95,9 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
                 <div className="table-wrap"><table><thead><tr><th>Source</th><th>Extracted</th><th>Valid</th><th>Orders</th><th>Revenue</th><th>Status</th></tr></thead><tbody>{intakeAnalysis.files.map((item, index) => <tr key={`${item.name}-${index}`}><td><span className="source-name"><b>{item.type}</b><span><strong>{item.name}</strong><small>{Math.max(1, Math.round(item.size / 1024))} KB · {item.startDate ? `${item.startDate}—${item.endDate}` : "No date range"}</small></span></span></td><td>{item.extractedRows}</td><td>{item.validRows}</td><td>{item.orders}</td><td>{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(item.revenue)}</td><td><span className={`source-status ${item.issues ? "flag" : "pass"}`}>{item.issues ? countLabel(item.issues, "issue") : "Ready"}</span></td></tr>)}</tbody></table></div>
               </section>
 
-              <section className="schema-audit" aria-labelledby="schema-audit-title">
+              <section className="schema-audit chart-reveal" ref={coverageRevealRef} aria-labelledby="schema-audit-title">
                 <div className="incoming-section-head"><h3 id="schema-audit-title">Field coverage</h3><small>{intakeAnalysis.coverage.filter((field) => field.present === field.total && field.total).length}/{intakeAnalysis.coverage.length} complete</small></div>
-                <ul>{intakeAnalysis.coverage.map((field) => { const rate = field.total ? Math.round((field.present / field.total) * 100) : 0; return <li key={field.label}><div><span>{field.label}</span><strong className={rate < 100 ? "coverage-warning" : ""}>{rate}%</strong></div><div><i style={{ width: `${rate}%` }} /></div><small>{field.present} of {field.total} rows populated</small></li>; })}</ul>
+                <ul>{intakeAnalysis.coverage.map((field, index) => { const rate = field.total ? Math.round((field.present / field.total) * 100) : 0; return <li style={{ "--chart-index": index }} key={field.label}><div><span>{field.label}</span><strong className={rate < 100 ? "coverage-warning" : ""}>{rate}%</strong></div><div><i style={{ width: `${rate}%` }} /></div><small>{field.present} of {field.total} rows populated</small></li>; })}</ul>
               </section>
             </div>
 

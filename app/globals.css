@@ -2628,3 +2628,274 @@ input:focus-visible,
 @media (max-width: 720px) {
   .file-guidance ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Accessible type scale: keep compact UI text legible on laptop and mobile screens. */
+@media screen {
+  body { font-size: 16px; }
+
+  .privacy-note,
+  .site-footer,
+  .progress a,
+  .progress > span,
+  .two-step-progress button,
+  .setup-block-heading p,
+  .panel-title p,
+  .drop-zone > span:not(.upload-icon),
+  .helper,
+  .file-notice,
+  .sample-callout p,
+  .detected-period strong,
+  .date-adjuster summary,
+  .date-adjuster label,
+  .date-adjuster input[type="date"],
+  .file-list small,
+  .disabled-hint,
+  .validation-checklist strong,
+  .validation-checklist small,
+  .alert span,
+  .generated-meta,
+  .generated-meta span,
+  .metric-card > span,
+  .metric-card small,
+  .review-waiting-card div > p:last-child,
+  .data-facts dt,
+  .data-facts .fact-date,
+  .review-files > small,
+  .review-files li,
+  .review-files li b,
+  .review-files li small,
+  .flagged-errors summary,
+  .flagged-errors summary small,
+  .flagged-errors li strong,
+  .flagged-errors li small,
+  .flagged-errors li em,
+  .flagged-errors > p,
+  .all-clear-strip strong,
+  .all-clear-strip small,
+  .status-card > div > small,
+  .compact-file-list li,
+  .validation-mini span,
+  .review-period small,
+  .review-period strong,
+  .review-period span,
+  .review-file-strip > div small,
+  .review-file-strip li,
+  .review-file-strip li > span,
+  .review-file-strip li small,
+  .section-kicker p,
+  .section-status,
+  .locked-card p,
+  .validation-topline p,
+  .score-ring small,
+  .issue-drawer summary,
+  .success-strip small,
+  .card-heading > span,
+  .bar-row,
+  .bar-row > span,
+  .summary-card > div small,
+  .summary-card > div strong,
+  .tabs button,
+  .report-quality-strip p,
+  .daily-column > strong,
+  .daily-column > span,
+  .daily-column > small,
+  .action-center li small,
+  .action-center li p,
+  .ranked-row span,
+  .ranked-row strong,
+  .ranked-row b,
+  .donut small,
+  .mix-layout li,
+  .mix-layout li strong,
+  .order-economics dt,
+  .order-economics dl small,
+  .source-boundary p,
+  .incoming-audit .data-review-head > div > p:last-child,
+  .incoming-section-head > small,
+  .incoming-sales-snapshot dt,
+  .source-ledger table,
+  .source-name > b,
+  .source-name strong,
+  .source-name small,
+  .source-status,
+  .schema-audit li > div:first-child,
+  .schema-audit li small,
+  .coordinator-readiness strong,
+  .coordinator-readiness small {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .eyebrow,
+  .issue-line,
+  .section-number,
+  .required-badge,
+  .sample-actions > button,
+  .sample-callout a,
+  .detected-period small,
+  .file-type,
+  .review-badge,
+  th {
+    font-size: 12px;
+  }
+
+  table,
+  .source-ledger table {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .intake-heading > p:last-child,
+  .review-hero > div:first-child > p:last-child,
+  .file-guidance > p {
+    font-size: 16px;
+  }
+
+  .sample-actions > button,
+  .sample-callout a,
+  .tabs button {
+    min-height: 36px;
+  }
+}
+
+@media screen and (max-width: 720px) {
+  .privacy-note,
+  .masthead-note {
+    font-size: 12px;
+  }
+
+  .progress a,
+  .progress > span,
+  .two-step-progress button {
+    font-size: 0;
+  }
+
+  .progress a > span,
+  .progress > span > span,
+  .two-step-progress button > span {
+    font-size: 12px;
+  }
+}
+
+/* Report publishing: let the visual story build in a calm, readable sequence. */
+@media screen {
+  .chart-reveal:not(.is-visible) .daily-column i {
+    opacity: .25;
+    transform: scaleY(0);
+  }
+
+  .chart-reveal:not(.is-visible) .ranked-row i {
+    transform: scaleX(0);
+  }
+
+  .chart-reveal:not(.is-visible).schema-audit li i {
+    transform: scaleX(0);
+  }
+
+  .chart-reveal:not(.is-visible).validation-content .score-ring::before {
+    opacity: 0;
+    transform: rotate(-120deg) scale(.76);
+  }
+
+  .chart-reveal:not(.is-visible) .donut::before {
+    opacity: 0;
+    clip-path: circle(0 at 50% 50%);
+    transform: rotate(-320deg) scale(.86);
+  }
+
+  .chart-reveal.is-visible .daily-column i {
+    transform-origin: center bottom;
+    animation: chart-rise 1.55s cubic-bezier(.16, .78, .2, 1) both;
+    animation-delay: calc(260ms + (var(--chart-index, 0) * 180ms));
+  }
+
+  .chart-reveal.is-visible .ranked-row i {
+    transform-origin: left center;
+    animation: chart-grow-x 1.55s cubic-bezier(.16, .78, .2, 1) both;
+    animation-delay: calc(260ms + (var(--chart-index, 0) * 180ms));
+  }
+
+  .chart-reveal.is-visible .donut::before {
+    animation: chart-donut-in 4.8s cubic-bezier(.12, .62, .18, 1) .3s both;
+  }
+
+  .chart-reveal.is-visible.schema-audit li i {
+    transform-origin: left center;
+    animation: chart-grow-x 1.55s cubic-bezier(.16, .78, .2, 1) both;
+    animation-delay: calc(260ms + (var(--chart-index, 0) * 180ms));
+  }
+
+  .chart-reveal.is-visible.validation-content .score-ring::before {
+    animation: chart-wheel-in 2.6s cubic-bezier(.16, .78, .2, 1) .2s both;
+  }
+}
+
+@keyframes chart-wheel-in {
+  0% { opacity: 0; transform: rotate(-160deg) scale(.72); }
+  68% { opacity: 1; transform: rotate(12deg) scale(1.04); }
+  100% { opacity: 1; transform: rotate(0) scale(1); }
+  }
+
+@keyframes chart-rise {
+  from { opacity: .25; transform: scaleY(0); }
+  to { opacity: 1; transform: scaleY(1); }
+}
+
+@keyframes chart-grow-x {
+  from { opacity: .25; transform: scaleX(0); }
+  to { opacity: 1; transform: scaleX(1); }
+}
+
+@keyframes chart-donut-in {
+  from {
+    opacity: 0;
+    clip-path: circle(0 at 50% 50%);
+    transform: rotate(-320deg) scale(.86);
+  }
+  to {
+    opacity: 1;
+    clip-path: circle(72% at 50% 50%);
+    transform: rotate(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .daily-column i,
+  .ranked-row i,
+  .donut::before,
+  .schema-audit li i,
+  .validation-content .score-ring::before {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Circular chart paint lives behind the stationary center labels. */
+.donut {
+  background: none;
+  isolation: isolate;
+}
+
+.donut::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--donut-background);
+}
+
+.score-ring {
+  background: none;
+  isolation: isolate;
+}
+
+.score-ring::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: conic-gradient(var(--green) var(--score), #e5ebe8 0);
+}

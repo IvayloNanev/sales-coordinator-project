@@ -85,8 +85,8 @@ export default function Home() {
     if (destination === "results" && !generatedDate) {
       setGeneratedDate(new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date()));
     }
+    window.scrollTo({ top: 0, behavior: "auto" });
     setPage(destination);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const produceResults = () => navigate("results");

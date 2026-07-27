@@ -1,10 +1,13 @@
+import useChartReveal from "../hooks/useChartReveal";
+
 function Stat({ label, value, tone }) { return <div className={`stat ${tone || ""}`}><span>{label}</span><strong>{value}</strong></div>; }
 
 export default function ValidationResults({ fileCount, totalRecords, results, onContinue, onReturn }) {
+  const revealRef = useChartReveal();
   const issueCount = results.invalidRecords.length;
   const cleanRate = totalRecords ? Math.round((results.validRecords.length / totalRecords) * 100) : 0;
   return (
-    <div className="validation-content">
+    <div className="validation-content chart-reveal" ref={revealRef}>
       <div className="validation-topline">
         <div><strong>{issueCount ? "Review complete—with a few flags." : "Everything looks clean."}</strong><p>{issueCount ? "Problem rows will stay out of the final report." : "Every received row is ready for reporting."}</p></div>
         <div className="score-ring" style={{ "--score": `${cleanRate * 3.6}deg` }}><span><strong>{cleanRate}%</strong><small>clean</small></span></div>
