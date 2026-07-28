@@ -43,6 +43,39 @@ test("keeps the first valid order and excludes later duplicates and invalid reco
   assert.ok(result.invalidRecords.some((record) => record.error === "Missing sales region"));
 });
 
+test("accepts Superstore headers and keeps distinct line items from the same order", () => {
+  const csv = [
+    "Row ID,Order ID,Order Date,Customer Name,City,State,Postal Code,Region,Category,Product Name,Sales,Quantity",
+    "1,CA-100,11/8/2016,Claire Gute,Henderson,Kentucky,42420,South,Furniture,Bookcase,261.96,2",
+    "2,CA-100,11/8/2016,Claire Gute,Henderson,Kentucky,42420,South,Furniture,Chair,731.94,3",
+  ].join("\n");
+  const parsed = parseCsvText(csv, "superstore.csv");
+  const result = validateRecords(parsed.records, parsed.fileErrors);
+
+  assert.deepEqual(parsed.fileErrors, []);
+  assert.equal(result.validRecords.length, 2);
+  assert.equal(result.duplicateRecords, 0);
+  assert.equal(result.validRecords[0].date, "11/8/2016");
+  assert.equal(result.validRecords[0].storeId, "42420");
+  assert.equal(result.validRecords[0].storeName, "Henderson, Kentucky");
+  assert.equal(result.validRecords[0].orderNumber, "CA-100");
+  assert.equal(result.validRecords[0].lineItemId, "1");
+  assert.equal(calculateReport(result.validRecords).uniqueOrders, 1);
+});
+
+test("uses city and state as a stable store fallback when postal code is blank", () => {
+  const csv = [
+    "Row ID,Order ID,Order Date,Customer Name,City,State,Postal Code,Region,Category,Product Name,Sales,Quantity",
+    "1,CA-100,11/8/2016,Claire Gute,Burlington,Vermont,,East,Furniture,Bookcase,261.96,2",
+  ].join("\n");
+  const parsed = parseCsvText(csv, "superstore.csv");
+  const result = validateRecords(parsed.records, parsed.fileErrors);
+
+  assert.equal(result.validRecords.length, 1);
+  assert.equal(result.validRecords[0].storeId, "Burlington, Vermont");
+  assert.equal(result.validRecords[0].storeName, "Burlington, Vermont");
+});
+
 test("requires customer names on every reportable row", () => {
   const result = validateRecords([{
     date: "2026-07-06", storeId: "101", storeName: "Downtown", orderNumber: "A-1", customerName: "",
@@ -104,6 +137,22 @@ test("sample files produce the manually verified totals", async () => {
   assert.equal(report.bestDay.date, "2026-07-06");
   assert.equal(report.bestDay.revenue, 9450);
   assert.equal(report.largestOrder.orderNumber, "103-001");
+});
+
+test("the bundled Superstore sample imports every line item and preserves order totals", async () => {
+  const name = "sample-superstore.csv";
+  const parsed = parseCsvText(await readFile(new URL(`../sample-files/${name}`, import.meta.url), "utf8"), name);
+  const result = validateRecords(parsed.records, parsed.fileErrors);
+  const report = calculateReport(result.validRecords);
+
+  assert.deepEqual(parsed.fileErrors, []);
+  assert.equal(parsed.records.length, 9994);
+  assert.equal(result.validRecords.length, 9994);
+  assert.equal(result.invalidRecords.length, 0);
+  assert.equal(result.duplicateRecords, 0);
+  assert.equal(report.uniqueOrders, 5009);
+  assert.equal(Number(report.totalRevenue.toFixed(2)), 2297200.86);
+  assert.deepEqual(getDateRange(result.validRecords), { startDate: "2014-01-03", endDate: "2017-12-30" });
 });
 
 test("accepts tabular JSON, TSV, and flags unreadable file formats", async () => {
