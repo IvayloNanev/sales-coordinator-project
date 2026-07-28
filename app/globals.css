@@ -637,6 +637,12 @@ td:last-child, th:last-child { text-align: right; }
 .incoming-audit-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(280px, .75fr); gap: 14px; margin: 14px 24px 20px; }
 .source-ledger, .schema-audit { min-width: 0; padding: 21px; border: 1px solid var(--line); border-radius: 12px; }
 .source-ledger .table-wrap { border: 1px solid var(--line); border-radius: 9px; }
+.audit-explainer {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
 .source-ledger table { font-size: 10px; }
 .source-ledger th, .source-ledger td { padding: 11px 10px; }
 .source-ledger td:not(:first-child) { text-align: right; }
