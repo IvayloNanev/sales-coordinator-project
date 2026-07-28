@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useChartReveal from "../hooks/useChartReveal";
 
 const formatPeriod = (startDate, endDate) => {
@@ -14,6 +14,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   const [isLoadingKaggle, setIsLoadingKaggle] = useState(false);
   const [kaggleError, setKaggleError] = useState("");
   const [isSourceEditing, setIsSourceEditing] = useState(false);
+  const validationPageRef = useRef(null);
   const reviewVisible = Boolean(validation && !isValidating);
   const snapshotRevealRef = useChartReveal(reviewVisible);
   const coverageRevealRef = useChartReveal(reviewVisible);
@@ -25,6 +26,18 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   const flaggedRows = validation
     ? new Set(validation.invalidRecords.map((record) => `${record.sourceFile}-${record.rowNumber}`)).size
     : 0;
+
+  useEffect(() => {
+    if (!reviewVisible || isSourceEditing) return undefined;
+    const timer = window.setTimeout(() => {
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      validationPageRef.current?.scrollIntoView({
+        behavior: reducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
+    }, 320);
+    return () => window.clearTimeout(timer);
+  }, [reviewVisible, isSourceEditing]);
 
   const addSelectedFiles = async (incoming) => {
     await onFiles(incoming);
@@ -105,10 +118,10 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
           </div>
         </div>
         </div>
-        {reviewVisible && !isSourceEditing && <div className="validation-source-overlay no-print"><span>Source validation complete</span><button type="button" onClick={() => setIsSourceEditing(true)}>Change source files</button></div>}
+        {reviewVisible && !isSourceEditing && <div className="validation-source-overlay no-print"><span>Source validation complete</span><button className="button secondary" type="button" onClick={() => setIsSourceEditing(true)}>Change source files</button></div>}
       </section>
 
-      {reviewVisible && <aside className="intake-status incoming-audit" aria-label="Automatic incoming data review">
+      {reviewVisible && <aside ref={validationPageRef} className="intake-status incoming-audit" aria-label="Automatic incoming data review">
           <section className={`data-review-card panel${flaggedRows ? " has-errors" : " all-clear"}`} aria-labelledby="data-review-title">
             <header className="data-review-head">
               <div><p className="section-number">01 / Data validation</p><h2 id="data-review-title">{flaggedRows ? "Order-data exceptions found" : "Superstore order data is ready"}</h2><p>{flaggedRows ? "Rows with missing or invalid order values stay out of the report." : "The historical order records passed validation and are ready for weekly or monthly analysis."}</p></div>
