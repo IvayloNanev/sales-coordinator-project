@@ -25,6 +25,15 @@ verified, byte-for-byte snapshot of
 from the app's own public assets, so the MVP does not require Kaggle credentials
 or depend on Kaggle availability at runtime.
 
+## Sales Coordinator workflow
+
+The generated report defaults to the latest seven-day period and compares it
+with the immediately preceding period. Sales coordinators can filter by date,
+region, category, and customer segment; review sales, profit, margin, discounts,
+and fulfillment; identify the largest category and product movements; flag
+unprofitable products and discount levels; and export the filtered rows to CSV
+or print/save the management report as PDF.
+
 ## Install and run
 
 Requirements: Node.js 22.13 or later.

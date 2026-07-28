@@ -112,7 +112,7 @@ export default function Home() {
           </section>
         ) : (
           <section className="page-view results-page" aria-label="Generated sales results">
-            <ReportDashboard report={report} startDate={setup.startDate} endDate={setup.endDate} generatedDate={generatedDate} fileCount={setup.files.length} totalRecords={totalRecords} validRowCount={validation?.validRecords.length ?? 0} issueCount={validation?.invalidRecords.length ?? 0} duplicateRecords={validation?.duplicateRecords ?? 0} onRestart={restart} />
+            <ReportDashboard report={report} records={validation?.validRecords ?? []} startDate={setup.startDate} endDate={setup.endDate} generatedDate={generatedDate} fileCount={setup.files.length} totalRecords={totalRecords} validRowCount={validation?.validRecords.length ?? 0} issueCount={validation?.invalidRecords.length ?? 0} duplicateRecords={validation?.duplicateRecords ?? 0} onRestart={restart} />
           </section>
         )}
       </main>
