@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { calculateReport, getDateRange, groupByRegion, groupByStore, normalizeDate, parseCsvText, parseInputFile, recordsToCsv, SalesDataManager, validateRecords } from "../lib/sales.js";
+import { calculateReport, comparisonDrivers, getDateRange, groupByRegion, groupByStore, normalizeDate, parseCsvText, parseInputFile, performanceChange, previousPeriod, recordsToCsv, SalesDataManager, validateRecords } from "../lib/sales.js";
 
 const validFixture = [
   { storeId: "101", storeName: "Downtown", orderNumber: "A-1", product: "Desk", productCategory: "Furniture", salesRegion: "North", quantitySold: 2, revenue: 800 },
@@ -212,6 +212,48 @@ test("SalesDataManager counts distinct orders and validates date filters", () =>
     orderCount: 1,
   }]);
   assert.throws(() => manager.filterData({ startDate: "not-a-date" }), /startDate/);
+});
+
+test("calculates profit metrics, prior periods, and performance drivers", () => {
+  const currentRecords = [
+    { orderNumber: "A-1", date: "1/8/2026", salesRegion: "West", productCategory: "Furniture", product: "Desk", quantitySold: 2, revenue: 200, profit: 40, discount: 0.1, fulfillmentDays: 3 },
+    { orderNumber: "A-2", date: "1/9/2026", salesRegion: "West", productCategory: "Technology", product: "Phone", quantitySold: 1, revenue: 100, profit: -10, discount: 0.3, fulfillmentDays: 5 },
+  ];
+  const previousRecords = [
+    { orderNumber: "P-1", date: "1/1/2026", salesRegion: "West", productCategory: "Furniture", product: "Desk", quantitySold: 1, revenue: 100, profit: 10, discount: 0, fulfillmentDays: 4 },
+  ];
+  const current = calculateReport(currentRecords);
+  const previous = calculateReport(previousRecords);
+
+  assert.equal(current.totalProfit, 30);
+  assert.equal(current.profitMargin, 10);
+  assert.equal(current.averageDiscount, 0.2);
+  assert.equal(current.averageFulfillmentDays, 4);
+  assert.deepEqual(previousPeriod("2026-01-08", "2026-01-14"), {
+    startDate: "2026-01-01",
+    endDate: "2026-01-07",
+  });
+  assert.equal(performanceChange(current, previous).revenue.percentage, 200);
+  assert.deepEqual(comparisonDrivers(currentRecords, previousRecords, "productCategory"), [
+    {
+      label: "Furniture",
+      currentRevenue: 200,
+      previousRevenue: 100,
+      currentProfit: 40,
+      previousProfit: 10,
+      revenueChange: 100,
+      profitChange: 30,
+    },
+    {
+      label: "Technology",
+      currentRevenue: 100,
+      previousRevenue: 0,
+      currentProfit: -10,
+      previousProfit: 0,
+      revenueChange: 100,
+      profitChange: -10,
+    },
+  ]);
 });
 
 test("accepts tabular JSON, TSV, and flags unreadable file formats", async () => {
