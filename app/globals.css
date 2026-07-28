@@ -297,6 +297,9 @@ td:last-child, th:last-child { text-align: right; }
 .hero-drop-zone > span:not(.upload-icon) { margin-top: 3px; }
 .intake-upload .sample-callout { margin-top: 18px; }
 .intake-upload .sample-callout > button { min-height: 36px; padding: 0 13px; border: 1px solid #c4d4cc; border-radius: 8px; color: var(--green-dark); background: white; cursor: pointer; font-size: 10px; font-weight: 800; }
+.kaggle-callout .sample-actions > button:disabled { cursor: wait; opacity: .65; }
+.kaggle-callout .sample-actions > a { width: auto; padding: 0 10px; }
+.kaggle-callout .kaggle-error { color: var(--red); font-weight: 700; }
 .intake-status { display: grid; gap: 12px; }
 .status-card { display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; gap: 13px; min-height: 98px; padding: 18px; box-shadow: none; transition: border-color .25s ease, transform .25s ease; }
 .status-card.complete { border-color: #b9d8ca; }
