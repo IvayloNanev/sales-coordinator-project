@@ -13,6 +13,12 @@ A pandas-compatible implementation is also available in
 `sales_data_manager.py`. Install `requirements.txt`, then load the bundled data
 with `SalesDataManager("data/sample-superstore.csv")`.
 
+Validate the full data layer against the bundled 9,994-row CSV with:
+
+```bash
+python scripts/validate_sales_data_manager.py
+```
+
 ## Install and run
 
 Requirements: Node.js 22.13 or later.
