@@ -229,6 +229,8 @@ test("calculates profit metrics, prior periods, and performance drivers", () => 
   assert.equal(current.profitMargin, 10);
   assert.equal(current.averageDiscount, 0.2);
   assert.equal(current.averageFulfillmentDays, 4);
+  assert.equal(current.orders[0].profit, 40);
+  assert.equal(current.orders[0].profitMargin, 20);
   assert.deepEqual(previousPeriod("2026-01-08", "2026-01-14"), {
     startDate: "2026-01-01",
     endDate: "2026-01-07",

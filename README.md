@@ -34,6 +34,12 @@ and period-over-period changes; identify the largest category and product moveme
 unprofitable products and discount levels; and export the filtered rows to CSV
 or print/save the management report as PDF.
 
+Quick period presets support weekly and monthly reporting. A needs-attention
+panel flags declining or unprofitable regions and categories, while the order
+detail view can be searched by order ID, customer, product, or region. Issue
+ownership and resolution remain outside the current source-data scope because
+the Superstore export does not contain operational case fields.
+
 ## Install and run
 
 Requirements: Node.js 22.13 or later.

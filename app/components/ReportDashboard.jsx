@@ -17,12 +17,25 @@ function DataTable({ columns, rows, label }) {
   return <div className="table-wrap"><table><caption className="sr-only">{label} sales breakdown</caption><thead><tr>{columns.map((column) => <th scope="col" key={column.key}>{column.label}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={`${label}-${index}`}>{columns.map((column) => <td key={column.key}>{column.render ? column.render(row[column.key], row) : row[column.key]}</td>)}</tr>)}</tbody></table></div>;
 }
 
-const shortDate = (value) => value ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`)) : "—";
+const shortDate = (value) => {
+  if (!value) return "—";
+  const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00Z` : value);
+  return Number.isNaN(date.getTime())
+    ? String(value)
+    : new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(date);
+};
 const countLabel = (count, singular, plural = `${singular}s`) => `${count} ${count === 1 ? singular : plural}`;
 const shiftDate = (value, days) => {
   const date = new Date(`${value}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
+};
+const calendarMonthRange = (value, offset = 0) => {
+  const date = new Date(`${value}T00:00:00Z`);
+  date.setUTCMonth(date.getUTCMonth() + offset, 1);
+  const startDate = date.toISOString().slice(0, 10);
+  date.setUTCMonth(date.getUTCMonth() + 1, 0);
+  return { startDate, endDate: date.toISOString().slice(0, 10) };
 };
 const changeLabel = (change) => {
   if (change.percentage === null) return change.value ? "New vs prior" : "No prior activity";
@@ -72,6 +85,7 @@ function CategoryMix({ categories, totalRevenue }) {
 
 export default function ReportDashboard({ records, startDate, endDate, generatedDate, fileCount, totalRecords, validRowCount, onRestart }) {
   const [view, setView] = useState("regions");
+  const [orderQuery, setOrderQuery] = useState("");
   const defaultStart = startDate && endDate ? [startDate, shiftDate(endDate, -6)].sort().at(-1) : startDate;
   const [filters, setFilters] = useState({
     startDate: defaultStart,
@@ -97,18 +111,54 @@ export default function ReportDashboard({ records, startDate, endDate, generated
   const priorReport = useMemo(() => calculateReport(priorRecords), [priorRecords]);
   const changes = useMemo(() => performanceChange(report, priorReport), [report, priorReport]);
   const categoryDrivers = useMemo(() => comparisonDrivers(currentRecords, priorRecords, "productCategory"), [currentRecords, priorRecords]);
+  const regionDrivers = useMemo(() => comparisonDrivers(currentRecords, priorRecords, "salesRegion"), [currentRecords, priorRecords]);
   const productDrivers = useMemo(() => comparisonDrivers(currentRecords, priorRecords, "product"), [currentRecords, priorRecords]);
   const discountImpact = useMemo(() => manager.discountImpact(currentRecords), [manager, currentRecords]);
   const underperformers = useMemo(
     () => report.products.filter((product) => product.profit < 0).sort((a, b) => a.profit - b.profit).slice(0, 8),
     [report.products],
   );
+  const attentionGroups = useMemo(() => {
+    const flagged = (groups, drivers, key) => {
+      const changesByName = new Map(drivers.map((driver) => [driver.label, driver]));
+      return groups
+        .map((group) => ({ ...group, revenueChange: changesByName.get(group[key])?.revenueChange ?? 0 }))
+        .filter((group) => group.profit < 0 || group.revenueChange < 0)
+        .sort((a, b) => a.revenueChange - b.revenueChange || a.profit - b.profit);
+    };
+    return {
+      regions: flagged(report.regions, regionDrivers, "salesRegion"),
+      categories: flagged(report.categories, categoryDrivers, "productCategory"),
+    };
+  }, [report.regions, report.categories, regionDrivers, categoryDrivers]);
+  const visibleOrders = useMemo(() => {
+    const query = orderQuery.trim().toLowerCase();
+    if (!query) return report.orders;
+    return report.orders.filter((order) => (
+      order.orderNumber.toLowerCase().includes(query)
+      || order.customerName.toLowerCase().includes(query)
+      || order.products.toLowerCase().includes(query)
+      || order.salesRegion.toLowerCase().includes(query)
+    ));
+  }, [report.orders, orderQuery]);
   const money = (value) => formatCurrency(value);
   const percent = (value) => `${Math.round(value)}%`;
   const excluded = Math.max(0, totalRecords - validRowCount);
   const cleanRate = totalRecords ? (validRowCount / totalRecords) * 100 : 0;
   const updateFilter = (field, value) => setFilters((current) => ({ ...current, [field]: value }));
   const resetFilters = () => setFilters({ startDate: defaultStart, endDate, region: "", category: "", segment: "" });
+  const applyPeriod = (period) => {
+    let range;
+    if (period === "week") range = { startDate: shiftDate(endDate, -6), endDate };
+    if (period === "month") range = { ...calendarMonthRange(endDate), endDate };
+    if (period === "previous-month") range = calendarMonthRange(endDate, -1);
+    if (period === "all") range = { startDate, endDate };
+    setFilters((current) => ({
+      ...current,
+      startDate: range.startDate < startDate ? startDate : range.startDate,
+      endDate: range.endDate > endDate ? endDate : range.endDate,
+    }));
+  };
   const downloadFilteredCsv = () => {
     const blob = new Blob([recordsToCsv(currentRecords)], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -122,6 +172,7 @@ export default function ReportDashboard({ records, startDate, endDate, generated
     regions: { label: "Regions", rows: report.regions, columns: [{ key: "salesRegion", label: "Region" }, { key: "orders", label: "Orders" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: money }, { key: "profitMargin", label: "Margin", render: (value) => `${value.toFixed(1)}%` }] },
     categories: { label: "Categories", rows: report.categories, columns: [{ key: "productCategory", label: "Category" }, { key: "orders", label: "Orders" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: money }, { key: "profitMargin", label: "Margin", render: (value) => `${value.toFixed(1)}%` }] },
     products: { label: "Products", rows: report.products, columns: [{ key: "product", label: "Product" }, { key: "productCategory", label: "Category" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: money }, { key: "averageDiscount", label: "Avg. discount", render: (value) => `${(value * 100).toFixed(1)}%` }] },
+    orders: { label: "Orders", rows: visibleOrders, columns: [{ key: "orderNumber", label: "Order ID" }, { key: "date", label: "Date", render: shortDate }, { key: "customerName", label: "Customer" }, { key: "salesRegion", label: "Region" }, { key: "products", label: "Products" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: money }] },
   };
 
   return (
@@ -135,6 +186,13 @@ export default function ReportDashboard({ records, startDate, endDate, generated
         <div><label htmlFor="report-category">Category</label><select id="report-category" value={filters.category} onChange={(event) => updateFilter("category", event.target.value)}><option value="">All categories</option>{options.categories.map((option) => <option key={option}>{option}</option>)}</select></div>
         <div><label htmlFor="report-segment">Segment</label><select id="report-segment" value={filters.segment} onChange={(event) => updateFilter("segment", event.target.value)}><option value="">All segments</option>{options.segments.map((option) => <option key={option}>{option}</option>)}</select></div>
         <button type="button" onClick={resetFilters}>Reset</button>
+        <div className="period-presets" aria-label="Quick reporting periods">
+          <span>Quick periods</span>
+          <button type="button" onClick={() => applyPeriod("week")}>Latest week</button>
+          <button type="button" onClick={() => applyPeriod("month")}>Latest month</button>
+          <button type="button" onClick={() => applyPeriod("previous-month")}>Previous month</button>
+          <button type="button" onClick={() => applyPeriod("all")}>All dates</button>
+        </div>
       </section>
 
       <section className="report-quality-strip" aria-label="Source data coverage"><div><span className="ready-dot" /><strong>{percent(cleanRate)} clean row coverage</strong></div><p>{countLabel(validRowCount, "valid row")} from {totalRecords} received{excluded ? ` · ${countLabel(excluded, "row")} excluded` : " · no rows excluded"}</p></section>
@@ -176,6 +234,14 @@ export default function ReportDashboard({ records, startDate, endDate, generated
           </div>
         </section>
 
+        <section className="analysis-panel attention-panel" aria-labelledby="attention-title">
+          <div className="card-heading"><h4 id="attention-title">Needs attention</h4><span>Declining sales or negative profit</span></div>
+          <div className="attention-groups">
+            <div><h5>Regions</h5>{attentionGroups.regions.length ? <ul>{attentionGroups.regions.map((group) => <li key={group.salesRegion}><span><strong>{group.salesRegion}</strong><small>{money(group.profit)} profit</small></span><b className={changeClass(group.revenueChange)}>{group.revenueChange > 0 ? "+" : ""}{money(group.revenueChange)} vs prior</b></li>)}</ul> : <p>No regional flags for this period.</p>}</div>
+            <div><h5>Categories</h5>{attentionGroups.categories.length ? <ul>{attentionGroups.categories.map((group) => <li key={group.productCategory}><span><strong>{group.productCategory}</strong><small>{money(group.profit)} profit</small></span><b className={changeClass(group.revenueChange)}>{group.revenueChange > 0 ? "+" : ""}{money(group.revenueChange)} vs prior</b></li>)}</ul> : <p>No category flags for this period.</p>}</div>
+          </div>
+        </section>
+
         <section className="analysis-panel" aria-labelledby="discount-impact-title">
           <div className="card-heading"><h4 id="discount-impact-title">Discount impact</h4><span>Profit by discount level</span></div>
           <div className="compact-analysis-table"><table><thead><tr><th>Discount</th><th>Sales</th><th>Profit</th><th>Avg. profit</th></tr></thead><tbody>{discountImpact.map((row) => <tr className={row.totalProfit < 0 ? "risk-row" : ""} key={row.discount}><td>{Math.round(row.discount * 100)}%</td><td>{money(row.totalSales)}</td><td>{money(row.totalProfit)}</td><td>{money(row.averageProfit)}</td></tr>)}</tbody></table></div>
@@ -190,9 +256,13 @@ export default function ReportDashboard({ records, startDate, endDate, generated
 
       <aside className="management-narrative"><span>“</span><p>{generateSummary(report, filters.startDate, filters.endDate)} {priorRecords.length ? `Sales were ${changeLabel(changes.revenue).toLowerCase()}, while profit was ${changeLabel(changes.profit).toLowerCase()}.` : "No comparable prior-period rows were available in the uploaded source."}</p></aside>
 
-      <section className="breakdown-card expanded-breakdown"><div className="breakdown-head"><h4>Detail</h4><div className="tabs" role="tablist" aria-label="Report breakdown">{Object.entries(views).map(([key, item]) => <button type="button" role="tab" aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)} key={key}>{item.label}</button>)}</div></div><DataTable rows={views[view].rows} columns={views[view].columns} label={views[view].label} /></section>
+      <section className="breakdown-card expanded-breakdown">
+        <div className="breakdown-head"><div><h4>Detail</h4><small>Review performance or trace an individual order.</small></div><div className="tabs" role="tablist" aria-label="Report breakdown">{Object.entries(views).map(([key, item]) => <button type="button" role="tab" aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)} key={key}>{item.label}</button>)}</div></div>
+        {view === "orders" && <div className="order-search no-print"><label htmlFor="order-search">Find an order</label><input id="order-search" type="search" value={orderQuery} onChange={(event) => setOrderQuery(event.target.value)} placeholder="Search order ID, customer, product, or region" /><span>{countLabel(visibleOrders.length, "matching order")}</span></div>}
+        <DataTable rows={views[view].rows} columns={views[view].columns} label={views[view].label} />
+      </section>
 
-      <section className="source-boundary"><strong>Built for Marcus’s Monday report</strong><p>The dashboard stays focused on period performance, regions, categories, products, discounts, and profit using only values present in the uploaded order data.</p></section>
+      <section className="source-boundary"><strong>Built for Marcus’s reporting role</strong><p>The dashboard covers order tracking, weekly and monthly performance, regions, categories, segments, products, discounts, and profit. Cross-department issue ownership and resolution require operational issue fields that are not present in this sales export.</p></section>
 
       <section className="report-actions no-print"><div><button className="button ghost" onClick={onRestart}>New report</button></div><div><button className="button secondary" type="button" onClick={downloadFilteredCsv}>Download filtered CSV</button><button className="button primary" type="button" onClick={() => window.print()}>Print / Save PDF</button></div></section>
     </section>
