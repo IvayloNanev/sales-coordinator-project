@@ -13,6 +13,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   const [isDragging, setIsDragging] = useState(false);
   const [isLoadingKaggle, setIsLoadingKaggle] = useState(false);
   const [kaggleError, setKaggleError] = useState("");
+  const [isSourceEditing, setIsSourceEditing] = useState(false);
   const reviewVisible = Boolean(validation && !isValidating);
   const snapshotRevealRef = useChartReveal(reviewVisible);
   const coverageRevealRef = useChartReveal(reviewVisible);
@@ -27,6 +28,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
 
   const addSelectedFiles = async (incoming) => {
     await onFiles(incoming);
+    setIsSourceEditing(false);
   };
 
   const handleDrop = (event) => {
@@ -62,7 +64,8 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
       onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setIsDragging(false); }}
       onDrop={handleDrop}
     >
-      <section className="panel intake-upload" aria-labelledby="files-title">
+      <section className={`panel intake-upload${reviewVisible && !isSourceEditing ? " validation-background" : ""}`} aria-labelledby="files-title">
+        <div className="intake-upload-content" inert={reviewVisible && !isSourceEditing}>
         <div className="intake-heading">
           <p className="issue-line">Sales file automation</p>
           <h1 id="files-title">Turn sales files into<br /><em>validated weekly reports.</em></h1>
@@ -101,6 +104,8 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
             <a href="https://www.kaggle.com/datasets/vivek468/superstore-dataset-final" target="_blank" rel="noreferrer" aria-label="View the Superstore dataset on Kaggle">Source</a>
           </div>
         </div>
+        </div>
+        {reviewVisible && !isSourceEditing && <div className="validation-source-overlay no-print"><span>Source validation complete</span><button type="button" onClick={() => setIsSourceEditing(true)}>Change source files</button></div>}
       </section>
 
       {reviewVisible && <aside className="intake-status incoming-audit" aria-label="Automatic incoming data review">

@@ -617,6 +617,50 @@ td:last-child, th:last-child { text-align: right; }
 /* Detailed incoming-data audit below the drop area */
 .intake-layout.has-review { grid-template-columns: 1fr; }
 .intake-layout.has-review .intake-upload { display: grid; grid-template-columns: minmax(280px, .8fr) minmax(420px, 1.2fr); align-items: center; gap: 34px; padding: 34px 38px; }
+.intake-upload-content { display: contents; }
+.intake-layout.has-review .intake-upload-content {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(280px, .8fr) minmax(420px, 1.2fr);
+  align-items: center;
+  gap: 34px;
+  transition: filter .3s ease, opacity .3s ease, transform .3s ease;
+}
+.intake-upload.validation-background .intake-upload-content {
+  filter: blur(4px);
+  opacity: .34;
+  pointer-events: none;
+  transform: scale(.99);
+  user-select: none;
+}
+.validation-source-overlay {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+}
+.validation-source-overlay span {
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.validation-source-overlay button {
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid var(--ink);
+  color: var(--ink);
+  background: rgba(255,255,255,.94);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+}
 .intake-layout.has-review .intake-heading > p:last-child { margin-bottom: 0; }
 .intake-layout.has-review .sample-callout, .intake-layout.has-review .file-notice { grid-column: 1 / -1; margin-top: 0; }
 .intake-layout.has-review .hero-drop-zone { min-height: 190px; }
@@ -675,6 +719,7 @@ td:last-child, th:last-child { text-align: right; }
 
 @media (max-width: 960px) {
   .intake-layout.has-review .intake-upload { grid-template-columns: 1fr; }
+  .intake-layout.has-review .intake-upload-content { grid-template-columns: 1fr; }
   .incoming-facts, .incoming-sales-snapshot dl { grid-template-columns: repeat(3, 1fr); }
   .incoming-audit-grid { grid-template-columns: 1fr; }
   .coordinator-readiness { grid-template-columns: 1fr 1fr; }
