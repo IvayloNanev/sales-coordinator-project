@@ -9,6 +9,10 @@ use cases: CSV loading, multi-field filtering, grouped performance summaries,
 underperformer detection, discount-impact analysis, and order-to-ship fulfillment
 analysis.
 
+A pandas-compatible implementation is also available in
+`sales_data_manager.py`. Install `requirements.txt`, then load the bundled data
+with `SalesDataManager("data/sample-superstore.csv")`.
+
 ## Install and run
 
 Requirements: Node.js 22.13 or later.
