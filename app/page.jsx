@@ -8,9 +8,9 @@ import { calculateReport, getDateRange, parseInputFile, validateRecords } from "
 
 const initialState = { startDate: "", endDate: "", files: [] };
 const coverageFields = [
-  ["Date", "date"], ["Store ID", "storeId"], ["Store name", "storeName"], ["Order number", "orderNumber"],
-  ["Customer", "customerName"], ["Product", "product"], ["Category", "productCategory"], ["Region", "salesRegion"],
-  ["Quantity", "quantitySold"], ["Revenue", "revenue"],
+  ["Order date", "date"], ["Order ID", "orderNumber"], ["Customer", "customerName"], ["Segment", "segment"],
+  ["Product", "product"], ["Category", "productCategory"], ["Region", "salesRegion"], ["Quantity", "quantitySold"],
+  ["Sales", "revenue"], ["Discount", "discount"], ["Profit", "profit"],
 ];
 
 export default function Home() {

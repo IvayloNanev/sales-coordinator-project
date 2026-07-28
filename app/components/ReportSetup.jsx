@@ -72,11 +72,11 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
           <div className="file-guidance-head">
             <div><p className="section-number">File requirements</p><h2 id="file-guidance-title">Start with the expected sales schema.</h2></div>
           </div>
-          <p><strong>Supported formats:</strong> CSV, Excel, JSON, TSV, pipe-delimited text, and table-based PDF.</p>
+          <p><strong>Best formats:</strong> CSV or Excel exports from your order system.</p>
           <details>
-            <summary>View 10 required columns <span aria-hidden="true">+</span></summary>
+            <summary>View Marcus’s reporting fields <span aria-hidden="true">+</span></summary>
             <ul>
-              {["Date", "Store ID", "Store name", "Order number", "Customer name", "Product", "Product category", "Sales region", "Quantity sold", "Revenue"].map((column) => <li key={column}>{column}</li>)}
+              {["Order date", "Order ID", "Customer", "Segment", "Product", "Category", "Region", "Quantity", "Sales", "Discount", "Profit"].map((column) => <li key={column}>{column}</li>)}
             </ul>
           </details>
         </section>
@@ -121,7 +121,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
 
             <section className="incoming-sales-snapshot chart-reveal" ref={snapshotRevealRef} aria-labelledby="incoming-sales-title">
               <div className="incoming-section-head"><h3 id="incoming-sales-title">The week at a glance</h3><small>Valid rows</small></div>
-              <dl><div><dt>Revenue</dt><dd>{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(report.totalRevenue)}</dd></div><div><dt>Orders</dt><dd>{report.uniqueOrders}</dd></div><div><dt>Units</dt><dd>{report.totalUnits}</dd></div><div><dt>Customers</dt><dd>{report.customerCount}</dd></div><div><dt>Products</dt><dd>{report.products.length}</dd></div><div><dt>Stores / regions</dt><dd>{report.storeCount} / {report.regions.length}</dd></div></dl>
+              <dl><div><dt>Revenue</dt><dd>{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(report.totalRevenue)}</dd></div><div><dt>Orders</dt><dd>{report.uniqueOrders}</dd></div><div><dt>Units</dt><dd>{report.totalUnits}</dd></div><div><dt>Customers</dt><dd>{report.customerCount}</dd></div><div><dt>Products</dt><dd>{report.products.length}</dd></div><div><dt>Regions</dt><dd>{report.regions.length}</dd></div></dl>
             </section>
 
             <div className="incoming-audit-grid">
@@ -145,7 +145,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
             ) : (
               <div className="all-clear-strip"><span aria-hidden="true">✓</span><div><strong>No errors found</strong><small>Every row will be included in the report.</small></div></div>
             )}
-            <section className="coordinator-readiness" aria-label="Sales coordinator readiness checks"><div><span className={startDate && endDate ? "pass" : "flag"}>{startDate && endDate ? "✓" : "!"}</span><p><strong>Reporting period</strong><small>{startDate && endDate ? "Dates detected and normalized" : "A valid date range is missing"}</small></p></div><div><span className={validation.duplicateRecords ? "flag" : "pass"}>{validation.duplicateRecords ? "!" : "✓"}</span><p><strong>{usesLineItems ? "Line-item identity" : "Order identity"}</strong><small>{validation.duplicateRecords ? `${countLabel(validation.duplicateRecords, usesLineItems ? "duplicate line item" : "duplicate order")} excluded; first valid occurrence kept` : usesLineItems ? "Line items are unique; repeated order IDs are grouped" : "Order numbers are unique"}</small></p></div><div><span className={report.customerCount ? "pass" : "flag"}>{report.customerCount ? "✓" : "!"}</span><p><strong>Customer records</strong><small>{report.customerCount ? `${countLabel(report.customerCount, "customer account")} detected` : "Customer name is required for every row"}</small></p></div><div><span className={validation.validRecords.length ? "pass" : "flag"}>{validation.validRecords.length ? "✓" : "!"}</span><p><strong>Report eligibility</strong><small>{validation.validRecords.length ? `${countLabel(validation.validRecords.length, "row")} will flow into results` : "No valid rows can be reported"}</small></p></div></section>
+            <section className="coordinator-readiness" aria-label="Sales coordinator readiness checks"><div><span className={startDate && endDate ? "pass" : "flag"}>{startDate && endDate ? "✓" : "!"}</span><p><strong>Reporting period</strong><small>{startDate && endDate ? "Dates detected and normalized" : "A valid date range is missing"}</small></p></div><div><span className={validation.duplicateRecords ? "flag" : "pass"}>{validation.duplicateRecords ? "!" : "✓"}</span><p><strong>{usesLineItems ? "Line-item identity" : "Order identity"}</strong><small>{validation.duplicateRecords ? `${countLabel(validation.duplicateRecords, usesLineItems ? "duplicate line item" : "duplicate order")} excluded; first valid occurrence kept` : usesLineItems ? "Line items are unique; repeated order IDs are grouped" : "Order numbers are unique"}</small></p></div><div><span className={report.regions.length ? "pass" : "flag"}>{report.regions.length ? "✓" : "!"}</span><p><strong>Management breakdowns</strong><small>{report.regions.length ? `${countLabel(report.regions.length, "region")} ready for comparison` : "Region is required for performance reporting"}</small></p></div><div><span className={validation.validRecords.length ? "pass" : "flag"}>{validation.validRecords.length ? "✓" : "!"}</span><p><strong>Report eligibility</strong><small>{validation.validRecords.length ? `${countLabel(validation.validRecords.length, "row")} will flow into results` : "No valid rows can be reported"}</small></p></div></section>
           </section>
         <button className="button full continue-button" type="button" disabled={!ready} onClick={onProduceResults}><span>Publish weekly report</span><span className="continue-button-icon" aria-hidden="true">→</span></button>
         {!ready && <p className="disabled-hint">Upload at least one file with a readable sales table and valid dated rows to continue.</p>}

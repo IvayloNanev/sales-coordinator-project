@@ -2979,6 +2979,10 @@ input:focus-visible,
   margin-top: 16px;
 }
 .coordinator-analysis-grid .analysis-panel { min-width: 0; }
+.coordinator-analysis-grid .change-drivers { grid-column: 1 / -1; }
+.report-overview-single { margin-top: 16px; }
+.report-overview-single .revenue-pulse { width: 100%; }
+.metric-grid-expanded { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .driver-groups {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3002,6 +3006,8 @@ input:focus-visible,
   .report-filter-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .report-filter-panel button { grid-column: 1 / -1; }
   .coordinator-analysis-grid { grid-template-columns: 1fr; }
+  .coordinator-analysis-grid .change-drivers { grid-column: auto; }
+  .metric-grid-expanded { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 620px) {
@@ -3010,4 +3016,5 @@ input:focus-visible,
   .driver-groups { grid-template-columns: 1fr; }
   .comparison-card { border-right: 0; border-bottom: 1px solid var(--line); }
   .comparison-strip > header { flex-direction: column; }
+  .metric-grid-expanded { grid-template-columns: 1fr; }
 }
