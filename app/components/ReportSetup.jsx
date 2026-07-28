@@ -68,16 +68,16 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
         <div className="intake-upload-content" inert={reviewVisible && !isSourceEditing}>
         <div className="intake-heading">
           <p className="issue-line">Sales file automation</p>
-          <h1 id="files-title">Turn sales files into<br /><em>validated weekly reports.</em></h1>
-          <p>Combine multiple sources, catch incomplete or duplicate records, and generate a decision-ready performance report.</p>
+          <h1 id="files-title">Turn sales files into<br /><em>validated performance reports.</em></h1>
+          <p>Drop in sales-related files from different systems, catch incomplete or duplicate records, and generate a decision-ready performance report.</p>
         </div>
         <section className="file-guidance" aria-labelledby="file-guidance-title">
           <div className="file-guidance-head">
             <div><p className="section-number">File requirements</p><h2 id="file-guidance-title">Start with the expected sales schema.</h2></div>
           </div>
-          <p><strong>Best formats:</strong> CSV or Excel exports from your order system.</p>
+          <p><strong>Bring any sales-related file:</strong> spreadsheets, CSV or delimited text, JSON, and table-based PDFs are read directly. Other files are checked and clearly flagged when they do not contain a readable sales table.</p>
           <details>
-            <summary>View Marcus’s reporting fields <span aria-hidden="true">+</span></summary>
+            <summary>View sales reporting fields <span aria-hidden="true">+</span></summary>
             <ul>
               {["Order date", "Order ID", "Customer", "Segment", "Product", "Category", "Region", "Quantity", "Sales", "Discount", "Profit"].map((column) => <li key={column}>{column}</li>)}
             </ul>
@@ -87,9 +87,9 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
           className={`drop-zone hero-drop-zone${isDragging ? " dragging" : ""}${filesReady ? " has-files" : ""}`}
         >
           <span className="upload-icon" aria-hidden="true">{isValidating ? "···" : filesReady ? "✓" : "⇧"}</span>
-          <strong>{isDragging ? "Drop supported files here" : isValidating ? "Reading and validating…" : filesReady ? `${countLabel(files.length, "file")} ready` : "Drag & drop supported sales files"}</strong>
-          <span>{filesReady ? "Drop more files or click to browse" : "or click to choose multiple files"}</span>
-          <input type="file" multiple accept=".csv,.xlsx,.xls,.xlsm,.ods,.json,.tsv,.tab,.psv,.txt,.dat,.pdf" onChange={(event) => { addSelectedFiles([...event.target.files]); event.currentTarget.value = ""; }} />
+          <strong>{isDragging ? "Drop sales files here" : isValidating ? "Reading and validating…" : filesReady ? `${countLabel(files.length, "file")} ready` : "Drag & drop sales-related files"}</strong>
+          <span>{filesReady ? "Drop more files or click to browse" : "Any file can be selected; readable sales tables will be imported"}</span>
+          <input type="file" multiple onChange={(event) => { addSelectedFiles([...event.target.files]); event.currentTarget.value = ""; }} />
         </label>
         <div className="sample-callout kaggle-callout">
           <div>
@@ -138,7 +138,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
 
               <section className="schema-audit chart-reveal" ref={coverageRevealRef} aria-labelledby="schema-audit-title">
                 <div className="incoming-section-head"><h3 id="schema-audit-title">Field coverage</h3><small>{intakeAnalysis.coverage.filter((field) => field.present === field.total && field.total).length}/{intakeAnalysis.coverage.length} complete</small></div>
-                <p className="audit-explainer">Coverage shows how many report-ready rows contain each field Marcus needs for order tracking, performance comparisons, and discount-profit analysis.</p>
+                <p className="audit-explainer">Coverage shows how many report-ready rows contain each field needed for order tracking, performance comparisons, and discount-profit analysis.</p>
                 <ul>{intakeAnalysis.coverage.map((field, index) => { const rate = field.total ? Math.round((field.present / field.total) * 100) : 0; return <li style={{ "--chart-index": index }} key={field.label}><div><span>{field.label}</span><strong className={rate < 100 ? "coverage-warning" : ""}>{rate}%</strong></div><div><i style={{ width: `${rate}%` }} /></div><small>{field.present} of {field.total} rows populated</small></li>; })}</ul>
               </section>
             </div>
