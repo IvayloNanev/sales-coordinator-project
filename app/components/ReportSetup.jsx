@@ -11,6 +11,8 @@ const countLabel = (count, singular, plural = `${singular}s`) => `${count} ${cou
 
 export default function ReportSetup({ startDate, endDate, files, validation, totalRecords, intakeAnalysis, report, isValidating, onFiles, onProduceResults }) {
   const [isDragging, setIsDragging] = useState(false);
+  const [isLoadingKaggle, setIsLoadingKaggle] = useState(false);
+  const [kaggleError, setKaggleError] = useState("");
   const reviewVisible = Boolean(validation && !isValidating);
   const snapshotRevealRef = useChartReveal(reviewVisible);
   const coverageRevealRef = useChartReveal(reviewVisible);
@@ -31,6 +33,25 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
     event.preventDefault();
     setIsDragging(false);
     addSelectedFiles([...event.dataTransfer.files]);
+  };
+
+  const loadKaggleDataset = async () => {
+    setIsLoadingKaggle(true);
+    setKaggleError("");
+    try {
+      const response = await fetch("/sample-files/sample-superstore.csv");
+      if (!response.ok) throw new Error(`Dataset request failed (${response.status})`);
+      const dataset = new File(
+        [await response.blob()],
+        "kaggle-superstore.csv",
+        { type: "text/csv" },
+      );
+      await addSelectedFiles([dataset]);
+    } catch (error) {
+      setKaggleError(error instanceof Error ? error.message : "Unable to load the Kaggle dataset");
+    } finally {
+      setIsLoadingKaggle(false);
+    }
   };
 
   return (
@@ -67,6 +88,19 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
           <span>{filesReady ? "Drop more files or click to browse" : "or click to choose multiple files"}</span>
           <input type="file" multiple accept=".csv,.xlsx,.xls,.xlsm,.ods,.json,.tsv,.tab,.psv,.txt,.dat,.pdf" onChange={(event) => { addSelectedFiles([...event.target.files]); event.currentTarget.value = ""; }} />
         </label>
+        <div className="sample-callout kaggle-callout">
+          <div>
+            <strong>Try the verified Kaggle Superstore dataset</strong>
+            <p>Loads the bundled 9,994-row snapshot from vivek468/superstore-dataset-final.</p>
+            {kaggleError && <p className="kaggle-error" role="alert">{kaggleError}</p>}
+          </div>
+          <div className="sample-actions">
+            <button type="button" disabled={isLoadingKaggle || isValidating} onClick={loadKaggleDataset}>
+              {isLoadingKaggle ? "Loading…" : "Load Kaggle dataset"}
+            </button>
+            <a href="https://www.kaggle.com/datasets/vivek468/superstore-dataset-final" target="_blank" rel="noreferrer" aria-label="View the Superstore dataset on Kaggle">Source</a>
+          </div>
+        </div>
       </section>
 
       {reviewVisible && <aside className="intake-status incoming-audit" aria-label="Automatic incoming data review">

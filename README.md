@@ -19,6 +19,12 @@ Validate the full data layer against the bundled 9,994-row CSV with:
 python scripts/validate_sales_data_manager.py
 ```
 
+The upload screen also includes a **Load Kaggle dataset** action. It loads a
+verified, byte-for-byte snapshot of
+[`vivek468/superstore-dataset-final`](https://www.kaggle.com/datasets/vivek468/superstore-dataset-final)
+from the app's own public assets, so the MVP does not require Kaggle credentials
+or depend on Kaggle availability at runtime.
+
 ## Install and run
 
 Requirements: Node.js 22.13 or later.
