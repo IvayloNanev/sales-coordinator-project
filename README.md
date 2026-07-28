@@ -6,7 +6,7 @@ Uploaded sales data is processed only in browser memory. It is not sent to a ser
 
 The reusable `SalesDataManager` in `lib/sales.js` supports six Superstore analysis
 use cases: CSV loading, multi-field filtering, grouped performance summaries,
-underperformer detection, discount-impact analysis, and order-to-ship fulfillment
+underperformer detection, discount-impact analysis, and prior-period comparisons
 analysis.
 
 A pandas-compatible implementation is also available in
@@ -30,7 +30,7 @@ or depend on Kaggle availability at runtime.
 The generated report defaults to the latest seven-day period and compares it
 with the immediately preceding period. Sales coordinators can filter by date,
 region, category, and customer segment; review sales, profit, margin, discounts,
-and fulfillment; identify the largest category and product movements; flag
+and period-over-period changes; identify the largest category and product movements; flag
 unprofitable products and discount levels; and export the filtered rows to CSV
 or print/save the management report as PDF.
 

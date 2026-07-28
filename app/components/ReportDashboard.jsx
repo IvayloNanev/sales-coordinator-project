@@ -70,8 +70,8 @@ function CategoryMix({ categories, totalRevenue }) {
   return <div className="mix-layout chart-reveal" ref={revealRef}><div className="donut" style={{ "--donut-background": `conic-gradient(${stops.join(", ")})` }} role="img" aria-label="Revenue share by product category"><span><strong>{categories.length}</strong><small>categories</small></span></div><ul>{categories.slice(0, 6).map((category, index) => <li key={category.productCategory}><i style={{ background: colors[index] }} /><span>{category.productCategory}</span><strong>{totalRevenue ? Math.round((category.revenue / totalRevenue) * 100) : 0}%</strong></li>)}</ul></div>;
 }
 
-export default function ReportDashboard({ records, startDate, endDate, generatedDate, fileCount, totalRecords, validRowCount, issueCount, duplicateRecords, onRestart }) {
-  const [view, setView] = useState("stores");
+export default function ReportDashboard({ records, startDate, endDate, generatedDate, fileCount, totalRecords, validRowCount, onRestart }) {
+  const [view, setView] = useState("regions");
   const defaultStart = startDate && endDate ? [startDate, shiftDate(endDate, -6)].sort().at(-1) : startDate;
   const [filters, setFilters] = useState({
     startDate: defaultStart,
@@ -99,7 +99,6 @@ export default function ReportDashboard({ records, startDate, endDate, generated
   const categoryDrivers = useMemo(() => comparisonDrivers(currentRecords, priorRecords, "productCategory"), [currentRecords, priorRecords]);
   const productDrivers = useMemo(() => comparisonDrivers(currentRecords, priorRecords, "product"), [currentRecords, priorRecords]);
   const discountImpact = useMemo(() => manager.discountImpact(currentRecords), [manager, currentRecords]);
-  const fulfillment = useMemo(() => manager.fulfillmentAnalysis("salesRegion", currentRecords), [manager, currentRecords]);
   const underperformers = useMemo(
     () => report.products.filter((product) => product.profit < 0).sort((a, b) => a.profit - b.profit).slice(0, 8),
     [report.products],
@@ -120,20 +119,10 @@ export default function ReportDashboard({ records, startDate, endDate, generated
     URL.revokeObjectURL(url);
   };
   const views = {
-    stores: { label: "Stores", rows: report.stores, columns: [{ key: "storeId", label: "ID" }, { key: "storeName", label: "Store" }, { key: "orders", label: "Orders" }, { key: "units", label: "Units" }, { key: "revenue", label: "Revenue", render: money }] },
-    regions: { label: "Regions", rows: report.regions, columns: [{ key: "salesRegion", label: "Region" }, { key: "orders", label: "Orders" }, { key: "units", label: "Units" }, { key: "revenue", label: "Revenue", render: money }] },
-    categories: { label: "Categories", rows: report.categories, columns: [{ key: "productCategory", label: "Category" }, { key: "orders", label: "Orders" }, { key: "units", label: "Units" }, { key: "revenue", label: "Revenue", render: money }] },
-    products: { label: "Products", rows: report.products, columns: [{ key: "product", label: "Product" }, { key: "productCategory", label: "Category" }, { key: "orders", label: "Orders" }, { key: "units", label: "Units" }, { key: "revenue", label: "Revenue", render: money }] },
-    customers: { label: "Customers", rows: report.customers, columns: [{ key: "customerName", label: "Customer" }, { key: "orders", label: "Orders" }, { key: "units", label: "Units" }, { key: "revenue", label: "Revenue", render: money }] },
-    orders: { label: "Orders", rows: report.orders, columns: [{ key: "orderNumber", label: "Order" }, { key: "date", label: "Date", render: shortDate }, { key: "customerName", label: "Customer" }, { key: "storeName", label: "Store" }, { key: "units", label: "Units" }, { key: "revenue", label: "Revenue", render: money }] },
+    regions: { label: "Regions", rows: report.regions, columns: [{ key: "salesRegion", label: "Region" }, { key: "orders", label: "Orders" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: money }, { key: "profitMargin", label: "Margin", render: (value) => `${value.toFixed(1)}%` }] },
+    categories: { label: "Categories", rows: report.categories, columns: [{ key: "productCategory", label: "Category" }, { key: "orders", label: "Orders" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: money }, { key: "profitMargin", label: "Margin", render: (value) => `${value.toFixed(1)}%` }] },
+    products: { label: "Products", rows: report.products, columns: [{ key: "product", label: "Product" }, { key: "productCategory", label: "Category" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: money }, { key: "averageDiscount", label: "Avg. discount", render: (value) => `${(value * 100).toFixed(1)}%` }] },
   };
-
-  const actions = [
-    { label: "Key account", title: report.topCustomer?.customerName ?? "No customer data", detail: report.topCustomer ? `${percent(report.topCustomerRevenueShare)} of revenue · ${countLabel(report.topCustomer.orders, "order")}` : "Add customer names to identify account concentration." },
-    { label: "Inventory signal", title: report.topSellingProduct, detail: `${report.products.find((product) => product.product === report.topSellingProduct)?.units ?? 0} units sold; confirm stock and fulfillment coverage.` },
-    { label: "Regional focus", title: report.highestRevenueRegion, detail: `${money(report.regions[0]?.revenue ?? 0)} in revenue; share the winning mix across other regions.` },
-    { label: issueCount ? "Data follow-up" : "CRM hygiene", title: issueCount ? `${countLabel(issueCount, "issue")} excluded` : "Source data passed", detail: issueCount ? `${countLabel(duplicateRecords, "duplicate row")} excluded; the first valid occurrence of each order was kept.` : "Customer, order, product, store, region, and date fields are report-ready." },
-  ];
 
   return (
     <section className="report-shell expanded-report" aria-labelledby="report-title">
@@ -164,19 +153,13 @@ export default function ReportDashboard({ records, startDate, endDate, generated
         <MetricCard featured label="Total revenue" value={money(report.totalRevenue)} note={`${money(report.dailyAverageRevenue)} per active day`} />
         <MetricCard featured label="Total profit" value={money(report.totalProfit)} note={`${report.profitMargin.toFixed(1)}% profit margin`} />
         <MetricCard label="Average discount" value={`${(report.averageDiscount * 100).toFixed(1)}%`} note="Across visible line items" />
-        <MetricCard label="Order to ship" value={report.averageFulfillmentDays === null ? "—" : `${report.averageFulfillmentDays.toFixed(1)} days`} note="Average fulfillment time" />
         <MetricCard label="Orders" value={report.uniqueOrders.toLocaleString()} note={countLabel(report.activeDays, "active sales day")} />
         <MetricCard label="Units sold" value={report.totalUnits.toLocaleString()} note={`${report.unitsPerOrder.toFixed(1)} per order`} />
         <MetricCard label="Average order" value={money(report.averageOrderValue)} note={`Median ${money(report.medianOrderValue)}`} />
-        <MetricCard label="Customers" value={report.customerCount.toLocaleString()} note={countLabel(report.repeatCustomerCount, "repeat customer")} />
-        <MetricCard label="Repeat rate" value={percent(report.repeatCustomerRate)} note="Customers with 2+ orders" />
-        <MetricCard label="Revenue / customer" value={money(report.averageRevenuePerCustomer)} note={`${money(report.revenuePerUnit)} per unit`} />
-        <MetricCard label="Stores" value={report.storeCount} note={countLabel(report.regions.length, "sales region")} />
       </div>
 
-      <div className="report-overview-grid">
+      <div className="report-overview-single">
         <section className="analysis-panel revenue-pulse" aria-labelledby="revenue-pulse-title"><div className="card-heading"><h4 id="revenue-pulse-title">Daily revenue</h4><span>Best · {shortDate(report.bestDay?.date)} · {money(report.bestDay?.revenue ?? 0)}</span></div><DailyRevenueChart days={report.daily} /></section>
-        <aside className="action-center" aria-labelledby="action-center-title"><div className="card-heading"><h4 id="action-center-title">Priorities</h4></div><ol>{actions.map((action, index) => <li key={action.label}><span>{String(index + 1).padStart(2, "0")}</span><div><small>{action.label}</small><strong>{action.title}</strong><p>{action.detail}</p></div></li>)}</ol></aside>
       </div>
 
       <div className="report-secondary-grid">
@@ -203,22 +186,13 @@ export default function ReportDashboard({ records, startDate, endDate, generated
           <div className="compact-analysis-table"><table><thead><tr><th>Product</th><th>Sales</th><th>Profit</th><th>Margin</th></tr></thead><tbody>{underperformers.map((product) => <tr key={product.product}><td>{product.product}</td><td>{money(product.revenue)}</td><td className="negative">{money(product.profit)}</td><td>{product.profitMargin.toFixed(1)}%</td></tr>)}</tbody></table></div>
         </section>
 
-        <section className="analysis-panel" aria-labelledby="fulfillment-title">
-          <div className="card-heading"><h4 id="fulfillment-title">Fulfillment</h4><span>Order-to-ship by region</span></div>
-          <div className="compact-analysis-table"><table><thead><tr><th>Region</th><th>Avg. days</th><th>Max days</th><th>Orders</th></tr></thead><tbody>{fulfillment.map((row) => <tr key={row.salesRegion}><td>{row.salesRegion}</td><td>{row.averageFulfillmentDays?.toFixed(1) ?? "—"}</td><td>{row.maximumFulfillmentDays ?? "—"}</td><td>{row.orderCount}</td></tr>)}</tbody></table></div>
-        </section>
-      </div>
-
-      <div className="report-insight-grid">
-        <section className="analysis-panel customer-intelligence" aria-labelledby="customer-title"><div className="card-heading"><h4 id="customer-title">Customers</h4><span>Top 3 · {percent(report.topThreeCustomerShare)} of revenue</span></div><RankedBars rows={report.customers} labelKey="customerName" /></section>
-        <section className="analysis-panel order-economics" aria-labelledby="economics-title"><div className="card-heading"><h4 id="economics-title">Order economics</h4></div><dl><div><dt>Largest order</dt><dd>{money(report.largestOrder?.revenue ?? 0)}</dd><small>{report.largestOrder?.orderNumber ?? "—"} · {report.largestOrder?.customerName ?? "—"}</small></div><div><dt>Median order</dt><dd>{money(report.medianOrderValue)}</dd><small>Midpoint of all valid orders</small></div><div><dt>Units per order</dt><dd>{report.unitsPerOrder.toFixed(1)}</dd><small>{money(report.revenuePerUnit)} revenue per unit</small></div><div><dt>Repeat customers</dt><dd>{report.repeatCustomerCount}</dd><small>{percent(report.repeatCustomerRate)} of customer base</small></div></dl></section>
       </div>
 
       <aside className="management-narrative"><span>“</span><p>{generateSummary(report, filters.startDate, filters.endDate)} {priorRecords.length ? `Sales were ${changeLabel(changes.revenue).toLowerCase()}, while profit was ${changeLabel(changes.profit).toLowerCase()}.` : "No comparable prior-period rows were available in the uploaded source."}</p></aside>
 
       <section className="breakdown-card expanded-breakdown"><div className="breakdown-head"><h4>Detail</h4><div className="tabs" role="tablist" aria-label="Report breakdown">{Object.entries(views).map(([key, item]) => <button type="button" role="tab" aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)} key={key}>{item.label}</button>)}</div></div><DataTable rows={views[view].rows} columns={views[view].columns} label={views[view].label} /></section>
 
-      <section className="source-boundary"><strong>Source-backed reporting</strong><p>This report uses only values present in the uploaded files. Quota attainment, pipeline value, win rate, forecast accuracy, delivery time, and sales-cycle length require target, opportunity-stage, delivery-date, and lifecycle fields that are not part of the current source schema.</p></section>
+      <section className="source-boundary"><strong>Built for Marcus’s Monday report</strong><p>The dashboard stays focused on period performance, regions, categories, products, discounts, and profit using only values present in the uploaded order data.</p></section>
 
       <section className="report-actions no-print"><div><button className="button ghost" onClick={onRestart}>New report</button></div><div><button className="button secondary" type="button" onClick={downloadFilteredCsv}>Download filtered CSV</button><button className="button primary" type="button" onClick={() => window.print()}>Print / Save PDF</button></div></section>
     </section>
