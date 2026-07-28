@@ -4,6 +4,11 @@ Sales Report Assistant is a local-first React application for consolidating week
 
 Uploaded sales data is processed only in browser memory. It is not sent to a server or saved after the page is refreshed.
 
+The reusable `SalesDataManager` in `lib/sales.js` supports six Superstore analysis
+use cases: CSV loading, multi-field filtering, grouped performance summaries,
+underperformer detection, discount-impact analysis, and order-to-ship fulfillment
+analysis.
+
 ## Install and run
 
 Requirements: Node.js 22.13 or later.

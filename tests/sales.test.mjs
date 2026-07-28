@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { calculateReport, getDateRange, groupByRegion, groupByStore, normalizeDate, parseCsvText, parseInputFile, recordsToCsv, validateRecords } from "../lib/sales.js";
+import { calculateReport, getDateRange, groupByRegion, groupByStore, normalizeDate, parseCsvText, parseInputFile, recordsToCsv, SalesDataManager, validateRecords } from "../lib/sales.js";
 
 const validFixture = [
   { storeId: "101", storeName: "Downtown", orderNumber: "A-1", product: "Desk", productCategory: "Furniture", salesRegion: "North", quantitySold: 2, revenue: 800 },
@@ -153,6 +153,65 @@ test("the bundled Superstore sample imports every line item and preserves order 
   assert.equal(report.uniqueOrders, 5009);
   assert.equal(Number(report.totalRevenue.toFixed(2)), 2297200.86);
   assert.deepEqual(getDateRange(result.validRecords), { startDate: "2014-01-03", endDate: "2017-12-30" });
+});
+
+test("SalesDataManager loads, filters, and analyzes Superstore sales data", async () => {
+  const name = "sample-superstore.csv";
+  const csv = await readFile(new URL(`../sample-files/${name}`, import.meta.url), "utf8");
+  const { manager, invalidRecords } = SalesDataManager.fromCsvText(csv, name);
+
+  assert.equal(invalidRecords.length, 0);
+  assert.equal(manager.records.length, 9994);
+  assert.equal(manager.records[0].segment, "Consumer");
+  assert.equal(manager.records[0].fulfillmentDays, 3);
+
+  const filtered = manager.filterData({
+    region: "South",
+    category: "Furniture",
+    segment: "Consumer",
+    startDate: "2016-01-01",
+    endDate: "2016-12-31",
+  });
+  assert.ok(filtered.length > 0);
+  assert.ok(filtered.every((record) => (
+    record.salesRegion === "South"
+      && record.productCategory === "Furniture"
+      && record.segment === "Consumer"
+      && normalizeDate(record.date) >= "2016-01-01"
+      && normalizeDate(record.date) <= "2016-12-31"
+  )));
+
+  const regions = manager.performanceSummary();
+  const south = regions.find((region) => region.salesRegion === "South");
+  assert.ok(south.totalSales > 0);
+  assert.ok(south.orderCount > 0);
+
+  const underperformers = manager.flagUnderperformers("product");
+  assert.ok(underperformers.length > 0);
+  assert.ok(underperformers.every((product) => product.totalProfit < 0));
+
+  const discountImpact = manager.discountImpact();
+  assert.equal(discountImpact[0].discount, 0);
+  assert.ok(discountImpact.some((group) => group.discount > 0));
+
+  const fulfillment = manager.fulfillmentAnalysis();
+  assert.ok(fulfillment.every((region) => region.averageFulfillmentDays >= 0));
+  assert.ok(fulfillment.every((region) => region.maximumFulfillmentDays >= region.averageFulfillmentDays));
+});
+
+test("SalesDataManager counts distinct orders and validates date filters", () => {
+  const manager = new SalesDataManager([
+    { orderNumber: "A-1", date: "1/1/2026", shipDate: "1/3/2026", salesRegion: "East", product: "Desk", revenue: 100, profit: 20 },
+    { orderNumber: "A-1", date: "1/1/2026", shipDate: "1/3/2026", salesRegion: "East", product: "Chair", revenue: 50, profit: -5 },
+  ]);
+
+  assert.deepEqual(manager.performanceSummary(), [{
+    salesRegion: "East",
+    totalSales: 150,
+    totalProfit: 15,
+    orderCount: 1,
+  }]);
+  assert.throws(() => manager.filterData({ startDate: "not-a-date" }), /startDate/);
 });
 
 test("accepts tabular JSON, TSV, and flags unreadable file formats", async () => {
