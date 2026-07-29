@@ -104,7 +104,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
 
       const start = window.scrollY;
       const distance = destination - start;
-      const duration = 900;
+      const duration = 720;
       const startedAt = window.performance.now();
       const guideToReport = (now) => {
         const progress = Math.min((now - startedAt) / duration, 1);
