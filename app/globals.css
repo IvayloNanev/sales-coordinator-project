@@ -694,10 +694,6 @@ td:last-child, th:last-child { text-align: right; }
 .dataset-counts strong { font-size: 22px; letter-spacing: -.03em; }
 .dataset-counts span { margin-top: 3px; color: var(--muted); font-size: 10px; font-weight: 750; text-transform: uppercase; }
 .column-dictionary h4 { margin: 0; font-size: 16px; }
-.column-name-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 16px; padding: 0; list-style: none; }
-.column-name-grid li { display: grid; grid-template-columns: 28px minmax(0, 1fr); align-items: center; gap: 9px; min-width: 0; padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; background: rgba(255, 255, 255, .48); }
-.column-name-grid li > span { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: white; background: var(--navy); font-size: 11px; font-weight: 800; }
-.column-name-grid li > strong { min-width: 0; color: var(--ink); font-size: 14px; line-height: 1.3; overflow-wrap: anywhere; }
 .column-dictionary .table-wrap { max-height: 460px; border: 1px solid var(--line); border-radius: 9px; overflow: auto; }
 .column-dictionary table { min-width: 780px; font-size: 13px; }
 .column-dictionary thead { position: sticky; top: 0; z-index: 1; }
@@ -790,7 +786,6 @@ td:last-child, th:last-child { text-align: right; }
   .intake-layout.has-review .intake-upload-content { grid-template-columns: 1fr; }
   .incoming-facts, .incoming-sales-snapshot dl { grid-template-columns: repeat(3, 1fr); }
   .dataset-contents-head { grid-template-columns: 1fr; }
-  .column-name-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .incoming-audit-grid { grid-template-columns: 1fr; }
   .validation-detail-grid { grid-template-columns: 1fr 1fr; }
   .quality-checks { grid-column: 1 / -1; }
@@ -804,7 +799,6 @@ td:last-child, th:last-child { text-align: right; }
   .incoming-sales-snapshot { margin-right: 12px; margin-left: 12px; padding: 16px; }
   .dataset-contents { margin-right: 12px; margin-left: 12px; padding: 16px; }
   .dataset-counts { grid-template-columns: 1fr; }
-  .column-name-grid { grid-template-columns: 1fr; }
   .row-preview summary { align-items: flex-start; flex-direction: column; }
   .incoming-sales-snapshot dl { grid-template-columns: 1fr 1fr; }
   .incoming-audit-grid { margin-right: 12px; margin-left: 12px; }
