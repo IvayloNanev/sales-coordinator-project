@@ -27,14 +27,27 @@ export default function Home() {
   useLayoutEffect(() => {
     if (page !== "results") return undefined;
     const root = document.documentElement;
+    const body = document.body;
     const previousScrollBehavior = root.style.scrollBehavior;
+    const previousRootAnchor = root.style.overflowAnchor;
+    const previousBodyAnchor = body.style.overflowAnchor;
     root.style.scrollBehavior = "auto";
+    root.style.overflowAnchor = "none";
+    body.style.overflowAnchor = "none";
     window.scrollTo(0, 0);
     const frame = window.requestAnimationFrame(() => {
       window.scrollTo(0, 0);
-      root.style.scrollBehavior = previousScrollBehavior;
     });
-    return () => window.cancelAnimationFrame(frame);
+    const timer = window.setTimeout(() => {
+      window.scrollTo(0, 0);
+      root.style.scrollBehavior = previousScrollBehavior;
+      root.style.overflowAnchor = previousRootAnchor;
+      body.style.overflowAnchor = previousBodyAnchor;
+    }, 180);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
   }, [page]);
 
   const analyzeFiles = async (files) => {

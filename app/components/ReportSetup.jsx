@@ -147,6 +147,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
 
   const buildSalesReport = () => {
     if (!ready || isBuildingReport) return;
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     setIsBuildingReport(true);
     window.setTimeout(onProduceResults, 480);
   };
