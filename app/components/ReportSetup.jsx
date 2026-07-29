@@ -228,9 +228,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
                 <ul>{validation.invalidRecords.slice(0, 8).map((record, index) => <li key={`${record.sourceFile}-${record.rowNumber}-${record.error}-${index}`}><span><strong>{record.sourceFile}</strong><small>Row {record.rowNumber || "—"}{record.orderNumber ? ` · ${record.orderNumber}` : ""}</small></span><em>{record.error}</em></li>)}</ul>
                 {validation.invalidRecords.length > 8 && <p>+ {validation.invalidRecords.length - 8} more issues will be excluded from results.</p>}
               </details>
-            ) : (
-              <div className="all-clear-strip"><span aria-hidden="true">✓</span><div><strong>No errors found</strong><small>Every row will be included in the report.</small></div></div>
-            )}
+            ) : null}
             <section className="validation-detail-grid">
               <section className="quality-checks" aria-labelledby="quality-checks-title">
                 <div className="incoming-section-head"><h3 id="quality-checks-title">Business-rule checks</h3><small>{qualityChecks.filter(([, count]) => !count).length}/{qualityChecks.length} passed</small></div>
