@@ -10,6 +10,29 @@ const formatPeriod = (startDate, endDate) => {
 const countLabel = (count, singular, plural = `${singular}s`) => `${count} ${count === 1 ? singular : plural}`;
 const EXPECTED_REGIONS = new Set(["East", "West", "Central", "South"]);
 const EXPECTED_CATEGORIES = new Set(["Furniture", "Office Supplies", "Technology"]);
+const COLUMN_DETAILS = {
+  "Row ID": "Unique identifier for one product line",
+  "Order ID": "Order shared by one or more product lines",
+  "Order Date": "Date the customer placed the order",
+  "Ship Date": "Date the order line was shipped",
+  "Ship Mode": "Selected shipping service level",
+  "Customer ID": "Unique customer identifier",
+  "Customer Name": "Customer’s full name",
+  Segment: "Consumer, Corporate, or Home Office",
+  Country: "Customer’s country",
+  City: "Customer’s city",
+  State: "Customer’s state",
+  "Postal Code": "Customer’s ZIP code",
+  Region: "East, West, Central, or South",
+  "Product ID": "Unique product identifier",
+  Category: "Furniture, Office Supplies, or Technology",
+  "Sub-Category": "More specific product grouping",
+  "Product Name": "Full product description",
+  Sales: "Sales amount for the line item",
+  Quantity: "Number of units sold",
+  Discount: "Discount rate, where 0.20 means 20%",
+  Profit: "Profit or loss for the line item",
+};
 
 const downloadTextFile = (name, content) => {
   const url = URL.createObjectURL(new Blob([content], { type: "text/csv;charset=utf-8" }));
@@ -46,6 +69,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   const ready = filesReady && periodReady && validationReady && !isValidating;
   const usesLineItems = Boolean(validation?.validRecords.some((record) => record.lineItemId));
   const records = validation?.validRecords ?? [];
+  const primaryFile = intakeAnalysis.files[0] ?? { columnNames: [], previewRows: [] };
   const columnCount = Math.max(0, ...intakeAnalysis.files.map((file) => file.columnCount ?? 0));
   const flaggedRows = validation
     ? new Set(validation.invalidRecords.map((record) => `${record.sourceFile}-${record.rowNumber}`)).size
@@ -178,6 +202,23 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
               <div className={validation.duplicateRecords ? "fact-warning" : ""}><dt>Duplicates</dt><dd>{validation.duplicateRecords}</dd></div>
               <div><dt>Date range</dt><dd className="fact-date">{formatPeriod(startDate, endDate)}</dd></div>
             </dl>
+
+            <section className="dataset-contents" aria-labelledby="dataset-contents-title">
+              <div className="dataset-contents-head">
+                <div><p className="section-number">02 / File contents</p><h3 id="dataset-contents-title">What is inside the uploaded file?</h3><p>Each of the {totalRecords.toLocaleString()} rows represents one product line within an order. An Order ID can appear on multiple rows when a customer bought more than one product.</p></div>
+                <div className={`file-error-summary ${flaggedRows ? "has-errors" : "is-clean"}`}><span aria-hidden="true">{flaggedRows ? "!" : "✓"}</span><p><strong>{flaggedRows ? countLabel(flaggedRows, "row error") : "No uploaded-file errors"}</strong><small>{flaggedRows ? "Flagged rows are listed below and excluded from reporting." : `All ${totalRecords.toLocaleString()} rows passed the required file checks.`}</small></p></div>
+              </div>
+              <div className="dataset-counts" aria-label="Dataset dimensions"><p><strong>{totalRecords.toLocaleString()}</strong><span>Data rows</span></p><p><strong>{columnCount}</strong><span>Named columns</span></p><p><strong>{report.uniqueOrders.toLocaleString()}</strong><span>Distinct orders</span></p></div>
+              <div className="column-dictionary">
+                <div className="incoming-section-head"><h4>Column guide</h4><small>{primaryFile.columnNames.length} names found</small></div>
+                <div className="table-wrap"><table><thead><tr><th>#</th><th>Column name</th><th>What it contains</th><th>Example from file</th></tr></thead><tbody>{primaryFile.columnNames.map((column, index) => <tr key={`${column}-${index}`}><td>{index + 1}</td><td><strong>{column}</strong></td><td>{COLUMN_DETAILS[column] ?? "Additional source value"}</td><td>{primaryFile.previewRows[0]?.[index] || "—"}</td></tr>)}</tbody></table></div>
+              </div>
+              <details className="row-preview">
+                <summary><span>Preview the first {primaryFile.previewRows.length} data rows</span><small>Scroll sideways to inspect all {columnCount} columns +</small></summary>
+                <p>This is a read-only preview of the uploaded source. Long product names may extend the table horizontally.</p>
+                <div className="table-wrap"><table><thead><tr><th>Row</th>{primaryFile.columnNames.map((column, index) => <th key={`${column}-preview-${index}`}>{column}</th>)}</tr></thead><tbody>{primaryFile.previewRows.map((row, rowIndex) => <tr key={`preview-${rowIndex}`}><td>{rowIndex + 1}</td>{row.map((value, columnIndex) => <td key={`preview-${rowIndex}-${columnIndex}`}>{value || "—"}</td>)}</tr>)}</tbody></table></div>
+              </details>
+            </section>
 
             <section className="incoming-sales-snapshot chart-reveal" ref={snapshotRevealRef} aria-labelledby="incoming-sales-title">
               <div className="incoming-section-head"><h3 id="incoming-sales-title">Dataset overview</h3><small>All report-ready rows</small></div>

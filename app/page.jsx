@@ -56,6 +56,8 @@ export default function Home() {
             type: file.name.split(".").pop()?.toUpperCase() || "FILE",
             size: file.size,
             columnCount: parsedFile.columnCount ?? 0,
+            columnNames: parsedFile.columnNames ?? [],
+            previewRows: parsedFile.previewRows ?? [],
             extractedRows: parsedFile.records.length,
             validRows: validRows.length,
             issues: issues.length,
