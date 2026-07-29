@@ -96,7 +96,7 @@ test("uses city and state as a stable store fallback when postal code is blank",
   assert.equal(result.validRecords[0].storeName, "Burlington, Vermont");
 });
 
-test("rejects blanks in every required reporting field", () => {
+test("allows optional store and product-category fields to be blank", () => {
   const base = {
     date: "2026-07-06", storeId: "101", storeName: "Downtown", orderNumber: "A-1",
     customerName: "Acme", product: "Desk", productCategory: "Furniture", salesRegion: "North",
@@ -107,9 +107,8 @@ test("rejects blanks in every required reporting field", () => {
     { ...base, orderNumber: "NO-CATEGORY", productCategory: "" },
   ]);
 
-  assert.equal(result.validRecords.length, 0);
-  assert.ok(result.invalidRecords.some((record) => record.error === "Missing store name"));
-  assert.ok(result.invalidRecords.some((record) => record.error === "Missing product category"));
+  assert.equal(result.validRecords.length, 2);
+  assert.equal(result.invalidRecords.length, 0);
 });
 
 test("groups spelling and whitespace variants without changing the first display label", () => {
@@ -188,14 +187,26 @@ test("scopes line-item IDs to their source file", () => {
   assert.equal(result.duplicateRecords, 0);
 });
 
-test("requires customer names on every reportable row", () => {
+test("uses a customer ID when the customer name is missing", () => {
   const result = validateRecords([{
-    date: "2026-07-06", storeId: "101", storeName: "Downtown", orderNumber: "A-1", customerName: "",
+    date: "2026-07-06", storeId: "101", storeName: "Downtown", orderNumber: "A-1", customerId: "CUST-305", customerName: "",
     product: "Desk", productCategory: "Furniture", salesRegion: "North", quantitySold: "1", revenue: "100",
     sourceFile: "test.csv", rowNumber: 2,
   }]);
-  assert.equal(result.validRecords.length, 0);
-  assert.ok(result.invalidRecords.some((record) => record.error === "Missing customer name"));
+  assert.equal(result.validRecords.length, 1);
+  assert.equal(result.validRecords[0].customerName, "CUST-305");
+  assert.equal(result.invalidRecords.length, 0);
+});
+
+test("uses an Unassigned region instead of discarding an otherwise valid row", () => {
+  const result = validateRecords([{
+    date: "2026-07-06", storeId: "101", storeName: "Downtown", orderNumber: "A-1", customerName: "Ion Systems",
+    product: "Desk", productCategory: "Furniture", salesRegion: "", salesRep: "Jordan Brooks", quantitySold: "1", revenue: "100",
+    sourceFile: "test.csv", rowNumber: 2,
+  }]);
+  assert.equal(result.validRecords.length, 1);
+  assert.equal(result.validRecords[0].salesRegion, "Unassigned");
+  assert.equal(result.invalidRecords.length, 0);
 });
 
 test("handles empty input safely", () => {
