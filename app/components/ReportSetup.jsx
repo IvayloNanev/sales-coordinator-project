@@ -8,6 +8,29 @@ const formatPeriod = (startDate, endDate) => {
 };
 
 const countLabel = (count, singular, plural = `${singular}s`) => `${count} ${count === 1 ? singular : plural}`;
+const EXPECTED_REGIONS = new Set(["East", "West", "Central", "South"]);
+const EXPECTED_CATEGORIES = new Set(["Furniture", "Office Supplies", "Technology"]);
+
+const downloadTextFile = (name, content) => {
+  const url = URL.createObjectURL(new Blob([content], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
+const csvCell = (value) => {
+  const text = String(value ?? "");
+  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+};
+
+const comparableDate = (value) => {
+  const text = String(value ?? "").trim();
+  const usDate = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (usDate) return `${usDate[3]}-${usDate[1].padStart(2, "0")}-${usDate[2].padStart(2, "0")}`;
+  return text;
+};
 
 export default function ReportSetup({ startDate, endDate, files, validation, totalRecords, intakeAnalysis, report, isValidating, onFiles, onProduceResults }) {
   const [isDragging, setIsDragging] = useState(false);
@@ -22,9 +45,40 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   const validationReady = Boolean(validation && validation.validRecords.length);
   const ready = filesReady && periodReady && validationReady && !isValidating;
   const usesLineItems = Boolean(validation?.validRecords.some((record) => record.lineItemId));
+  const records = validation?.validRecords ?? [];
+  const columnCount = Math.max(0, ...intakeAnalysis.files.map((file) => file.columnCount ?? 0));
   const flaggedRows = validation
     ? new Set(validation.invalidRecords.map((record) => `${record.sourceFile}-${record.rowNumber}`)).size
     : 0;
+  const invalidShipDates = records.filter((record) => record.shipDate && record.date && comparableDate(record.shipDate) < comparableDate(record.date)).length;
+  const invalidDiscounts = records.filter((record) => {
+    const value = Number(record.discount);
+    return record.discount !== "" && record.discount != null && (!Number.isFinite(value) || value < 0 || value > 1);
+  }).length;
+  const invalidProfits = records.filter((record) => record.profit !== "" && record.profit != null && !Number.isFinite(Number(record.profit))).length;
+  const unknownRegions = records.filter((record) => record.salesRegion && !EXPECTED_REGIONS.has(record.salesRegion)).length;
+  const unknownCategories = records.filter((record) => record.productCategory && !EXPECTED_CATEGORIES.has(record.productCategory)).length;
+  const unprofitableRows = records.filter((record) => Number(record.profit) < 0).length;
+  const highDiscountRows = records.filter((record) => Number(record.discount) >= 0.4).length;
+  const qualityChecks = [
+    ["Required values", flaggedRows, flaggedRows ? `${countLabel(flaggedRows, "row")} excluded from reporting` : "All required order and sales values are present"],
+    ["Order and ship dates", invalidShipDates, invalidShipDates ? `${countLabel(invalidShipDates, "row")} has a ship date before its order date` : "No ship dates occur before order dates"],
+    ["Discount values", invalidDiscounts, invalidDiscounts ? `${countLabel(invalidDiscounts, "value")} outside the 0–100% range` : "Discounts use the expected 0–100% range"],
+    ["Profit values", invalidProfits, invalidProfits ? `${countLabel(invalidProfits, "value")} cannot be read as a number` : "Profit values are numeric and analysis-ready"],
+    ["Regions", unknownRegions, unknownRegions ? `${countLabel(unknownRegions, "row")} uses an unknown region` : "Only East, West, Central, and South are present"],
+    ["Categories", unknownCategories, unknownCategories ? `${countLabel(unknownCategories, "row")} uses an unknown category` : "Only Furniture, Office Supplies, and Technology are present"],
+  ];
+
+  const downloadValidationResults = () => {
+    const rows = [
+      ["Check", "Status", "Details"],
+      ...qualityChecks.map(([label, count, detail]) => [label, count ? "Review" : "Passed", detail]),
+      ["Duplicate line items", validation.duplicateRecords ? "Review" : "Passed", validation.duplicateRecords ? `${validation.duplicateRecords} excluded` : "None found"],
+      ["Unprofitable line items", "Business warning", `${unprofitableRows} rows should be reviewed in the report`],
+      ["Discounts of 40% or more", "Business warning", `${highDiscountRows} rows should be reviewed for margin impact`],
+    ];
+    downloadTextFile("sales-data-validation.csv", rows.map((row) => row.map(csvCell).join(",")).join("\r\n"));
+  };
 
   const addSelectedFiles = async (incoming) => {
     await onFiles(incoming);
@@ -118,6 +172,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
             <dl className="data-facts incoming-facts">
               <div><dt>Files</dt><dd>{files.length}</dd></div>
               <div><dt>Rows received</dt><dd>{totalRecords}</dd></div>
+              <div><dt>Columns</dt><dd>{columnCount || "—"}</dd></div>
               <div><dt>Valid rows</dt><dd>{validation.validRecords.length}</dd></div>
               <div className={flaggedRows ? "fact-error" : ""}><dt>Flagged rows</dt><dd>{flaggedRows}</dd></div>
               <div className={validation.duplicateRecords ? "fact-warning" : ""}><dt>Duplicates</dt><dd>{validation.duplicateRecords}</dd></div>
@@ -153,8 +208,34 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
               <div className="all-clear-strip"><span aria-hidden="true">✓</span><div><strong>No errors found</strong><small>Every row will be included in the report.</small></div></div>
             )}
             <section className="coordinator-readiness" aria-label="Sales coordinator readiness checks"><div><span className={startDate && endDate ? "pass" : "flag"}>{startDate && endDate ? "✓" : "!"}</span><p><strong>Historical coverage</strong><small>{startDate && endDate ? `${formatPeriod(startDate, endDate)} available for period analysis` : "A valid order-date range is missing"}</small></p></div><div><span className={validation.duplicateRecords ? "flag" : "pass"}>{validation.duplicateRecords ? "!" : "✓"}</span><p><strong>{usesLineItems ? "Line-item identity" : "Order identity"}</strong><small>{validation.duplicateRecords ? `${countLabel(validation.duplicateRecords, usesLineItems ? "duplicate line item" : "duplicate order")} excluded; first valid occurrence kept` : usesLineItems ? "Line items are unique; repeated order IDs are grouped into orders" : "Order IDs are unique"}</small></p></div><div><span className={report.regions.length ? "pass" : "flag"}>{report.regions.length ? "✓" : "!"}</span><p><strong>Regional coverage</strong><small>{report.regions.length ? `${countLabel(report.regions.length, "region")} available for comparison` : "Region is required for performance reporting"}</small></p></div><div><span className={validation.validRecords.length ? "pass" : "flag"}>{validation.validRecords.length ? "✓" : "!"}</span><p><strong>Analysis readiness</strong><small>{validation.validRecords.length ? `${countLabel(validation.validRecords.length, "row")} can be analyzed` : "No valid rows can be reported"}</small></p></div></section>
+
+            <section className="validation-detail-grid">
+              <section className="quality-checks" aria-labelledby="quality-checks-title">
+                <div className="incoming-section-head"><h3 id="quality-checks-title">Data-quality checks</h3><small>{qualityChecks.filter(([, count]) => !count).length}/{qualityChecks.length} passed</small></div>
+                <ul>{qualityChecks.map(([label, count, detail]) => <li key={label}><span className={count ? "flag" : "pass"}>{count ? "!" : "✓"}</span><p><strong>{label}</strong><small>{detail}</small></p></li>)}</ul>
+                <div className="business-warnings">
+                  <p><strong>{unprofitableRows.toLocaleString()} unprofitable line items</strong><span>Valid business results to investigate—not file errors.</span></p>
+                  <p><strong>{highDiscountRows.toLocaleString()} line items discounted 40%+</strong><span>Review their effect on sales and margin in the report.</span></p>
+                </div>
+              </section>
+
+              <section className="reporting-readiness" aria-labelledby="reporting-readiness-title">
+                <div className="incoming-section-head"><h3 id="reporting-readiness-title">What Marcus can report</h3><small>Ready</small></div>
+                <ul>{["Weekly and monthly sales", "Prior-period comparisons", "Region and category performance", "Product and customer-segment analysis", "Discount impact on profit", "Order and shipping-time tracking"].map((item) => <li key={item}><span aria-hidden="true">✓</span>{item}</li>)}</ul>
+              </section>
+
+              <section className="dataset-limitations" aria-labelledby="dataset-limitations-title">
+                <div className="incoming-section-head"><h3 id="dataset-limitations-title">Source limitations</h3><small>Informational</small></div>
+                <p>This file cannot confirm operational issue resolution because it does not include:</p>
+                <ul>{["Order status, returns, or cancellations", "Inventory and stock levels", "Delivery dates or late-delivery flags", "Promotion or campaign names", "Sales representative ownership", "Issue notes and resolution status"].map((item) => <li key={item}>{item}</li>)}</ul>
+              </section>
+            </section>
           </section>
-        <button className="button full continue-button" type="button" disabled={!ready} onClick={onProduceResults}><span>Build sales report</span><span className="continue-button-icon" aria-hidden="true">→</span></button>
+        <div className="validation-actions no-print">
+          <button className="button ghost" type="button" onClick={() => setIsSourceEditing(true)}>Change source file</button>
+          <button className="button ghost" type="button" onClick={downloadValidationResults}>Download validation results</button>
+          <button className="button full continue-button" type="button" disabled={!ready} onClick={onProduceResults}><span>Build sales report</span><span className="continue-button-icon" aria-hidden="true">→</span></button>
+        </div>
         {!ready && <p className="disabled-hint">Upload at least one file with a readable sales table and valid dated rows to continue.</p>}
       </aside>}
     </div>
