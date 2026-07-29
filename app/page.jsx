@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import ProgressHeader from "./components/ProgressHeader";
 import ReportSetup from "./components/ReportSetup";
 import ReportDashboard from "./components/ReportDashboard";
@@ -24,31 +24,6 @@ export default function Home() {
   const [intakeAnalysis, setIntakeAnalysis] = useState({ files: [], coverage: [] });
   const report = useMemo(() => calculateReport(validation?.validRecords ?? []), [validation]);
   const resultsReady = Boolean(validation?.validRecords.length && setup.startDate && setup.endDate);
-
-  useLayoutEffect(() => {
-    if (page !== "results") return undefined;
-    const root = document.documentElement;
-    const body = document.body;
-    const previousScrollBehavior = root.style.scrollBehavior;
-    const previousRootAnchor = root.style.overflowAnchor;
-    const previousBodyAnchor = body.style.overflowAnchor;
-    root.style.scrollBehavior = "auto";
-    root.style.overflowAnchor = "none";
-    body.style.overflowAnchor = "none";
-    window.scrollTo(0, 0);
-    const anchorAtTop = window.setInterval(() => window.scrollTo(0, 0), 40);
-    const timer = window.setTimeout(() => {
-      window.clearInterval(anchorAtTop);
-      window.scrollTo(0, 0);
-    }, 640);
-    return () => {
-      window.clearInterval(anchorAtTop);
-      window.clearTimeout(timer);
-      root.style.scrollBehavior = previousScrollBehavior;
-      root.style.overflowAnchor = previousRootAnchor;
-      body.style.overflowAnchor = previousBodyAnchor;
-    };
-  }, [page]);
 
   const analyzeFiles = async (files) => {
     if (!files.length) {

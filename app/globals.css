@@ -3226,3 +3226,30 @@ input:focus-visible,
   .comparison-strip > header { flex-direction: column; }
   .metric-grid-expanded { grid-template-columns: 1fr; }
 }
+
+/* The report is a separate viewport, so validation-page scroll position cannot carry over. */
+.page-view.results-page {
+  position: fixed;
+  z-index: 10;
+  inset: 72px 0 0;
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--paper);
+}
+.page-view.results-page .expanded-report {
+  width: min(1400px, calc(100% - 48px));
+  margin: 48px auto 64px;
+}
+
+@media (max-width: 720px) {
+  .page-view.results-page { inset: 0; }
+  .page-view.results-page .expanded-report { width: min(100% - 24px, 1400px); margin-top: 24px; }
+}
+
+@media print {
+  .page-view.results-page { position: static; width: 100%; overflow: visible; }
+  .page-view.results-page .expanded-report { width: 100%; margin: 0; }
+}
