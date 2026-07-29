@@ -775,8 +775,8 @@ td:last-child, th:last-child { text-align: right; }
 .coordinator-readiness strong { font-size: 9px; }
 .coordinator-readiness small { margin-top: 3px; color: var(--muted); font-size: 7px; line-height: 1.35; }
 .incoming-audit > .continue-button { width: min(360px, 100%); justify-self: end; }
-.validation-detail-grid { display: grid; grid-template-columns: 1.4fr .8fr .8fr; gap: 14px; margin: 0 24px 24px; }
-.quality-checks, .reporting-readiness, .dataset-limitations { min-width: 0; padding: 21px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, .24); }
+.validation-detail-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 14px; margin: 0 24px 24px; }
+.quality-checks, .reporting-scope { min-width: 0; padding: 21px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, .24); }
 .quality-checks ul, .reporting-readiness ul, .dataset-limitations ul { margin: 0; padding: 0; list-style: none; }
 .quality-checks ul { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .quality-checks li { display: grid; grid-template-columns: 27px 1fr; align-items: center; gap: 9px; padding: 10px; border: 1px solid var(--line); border-radius: 9px; }
@@ -792,13 +792,15 @@ td:last-child, th:last-child { text-align: right; }
 .business-warnings strong, .business-warnings span { display: block; }
 .business-warnings strong { font-size: 11px; }
 .business-warnings span { margin-top: 3px; color: var(--muted); font-size: 10px; line-height: 1.4; }
-.reporting-readiness ul { display: grid; gap: 8px; }
-.reporting-readiness li { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 11px; line-height: 1.4; }
-.reporting-readiness li span { display: grid; flex: 0 0 21px; place-items: center; width: 21px; height: 21px; border-radius: 50%; color: white; background: var(--green); font-size: 8px; font-weight: 850; }
-.dataset-limitations > p { margin: 0 0 10px; color: var(--muted); font-size: 11px; line-height: 1.5; }
-.dataset-limitations ul { display: grid; gap: 6px; }
-.dataset-limitations li { position: relative; padding-left: 14px; color: var(--ink); font-size: 11px; line-height: 1.4; }
-.dataset-limitations li::before { content: "—"; position: absolute; left: 0; color: var(--gold); }
+.reporting-scope-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.reporting-scope-grid > div { padding: 14px; border: 1px solid var(--line); border-radius: 9px; background: rgba(255, 255, 255, .35); }
+.reporting-scope-grid h4 { display: flex; align-items: center; gap: 7px; margin: 0 0 11px; font-size: 12px; }
+.reporting-scope-grid h4 span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: white; font-size: 9px; }
+.reporting-readiness h4 span { background: var(--green); }
+.dataset-limitations h4 span { background: var(--muted); }
+.reporting-scope-grid ul { display: grid; gap: 7px; }
+.reporting-scope-grid li { position: relative; padding-left: 13px; color: var(--ink); font-size: 11px; line-height: 1.4; }
+.reporting-scope-grid li::before { content: "•"; position: absolute; left: 0; color: var(--gold); }
 .validation-actions { display: flex; justify-content: flex-end; gap: 10px; }
 .validation-actions .continue-button { width: min(360px, 100%); margin-top: 0; }
 
@@ -808,8 +810,7 @@ td:last-child, th:last-child { text-align: right; }
   .incoming-facts, .incoming-sales-snapshot dl { grid-template-columns: repeat(3, 1fr); }
   .dataset-contents-head { grid-template-columns: 1fr; }
   .incoming-audit-grid { grid-template-columns: 1fr; }
-  .validation-detail-grid { grid-template-columns: 1fr 1fr; }
-  .quality-checks { grid-column: 1 / -1; }
+  .validation-detail-grid { grid-template-columns: 1fr; }
   .coordinator-readiness { grid-template-columns: 1fr 1fr; }
 }
 
@@ -828,8 +829,8 @@ td:last-child, th:last-child { text-align: right; }
   .incoming-sales-snapshot dl { grid-template-columns: 1fr 1fr; }
   .incoming-audit-grid { margin-right: 12px; margin-left: 12px; }
   .validation-detail-grid { grid-template-columns: 1fr; margin-right: 12px; margin-left: 12px; }
-  .quality-checks { grid-column: auto; }
   .quality-checks ul, .business-warnings { grid-template-columns: 1fr; }
+  .reporting-scope-grid { grid-template-columns: 1fr; }
   .validation-actions { align-items: stretch; flex-direction: column; }
   .validation-actions .button, .validation-actions .continue-button { width: 100%; }
   .source-ledger, .schema-audit { padding: 16px; }

@@ -242,15 +242,13 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
                 </div>
               </section>
 
-              <section className="reporting-readiness" aria-labelledby="reporting-readiness-title">
-                <div className="incoming-section-head"><h3 id="reporting-readiness-title">What Marcus can report</h3><small>Ready</small></div>
-                <ul>{["Weekly and monthly sales", "Prior-period comparisons", "Region and category performance", "Product and customer-segment analysis", "Discount impact on profit", "Order and shipping-time tracking"].map((item) => <li key={item}><span aria-hidden="true">✓</span>{item}</li>)}</ul>
-              </section>
-
-              <section className="dataset-limitations" aria-labelledby="dataset-limitations-title">
-                <div className="incoming-section-head"><h3 id="dataset-limitations-title">Source limitations</h3><small>Informational</small></div>
-                <p>This file cannot confirm operational issue resolution because it does not include:</p>
-                <ul>{["Order status, returns, or cancellations", "Inventory and stock levels", "Delivery dates or late-delivery flags", "Promotion or campaign names", "Sales representative ownership", "Issue notes and resolution status"].map((item) => <li key={item}>{item}</li>)}</ul>
+              <section className="reporting-scope" aria-labelledby="reporting-scope-title">
+                <div className="incoming-section-head"><h3 id="reporting-scope-title">Reporting scope</h3><small>Based on available columns</small></div>
+                <p className="audit-explainer">This separates the questions Marcus can answer with this file from the operational information the source does not contain.</p>
+                <div className="reporting-scope-grid">
+                  <div className="reporting-readiness"><h4><span aria-hidden="true">✓</span> Supported</h4><ul>{["Weekly and monthly sales", "Prior-period comparisons", "Region and category performance", "Product and customer-segment analysis", "Discount impact on profit", "Order and shipping-time tracking"].map((item) => <li key={item}>{item}</li>)}</ul></div>
+                  <div className="dataset-limitations"><h4><span aria-hidden="true">—</span> Not available</h4><ul>{["Order status, returns, or cancellations", "Inventory and stock levels", "Delivery dates or late-delivery flags", "Promotion or campaign names", "Sales representative ownership", "Issue notes and resolution status"].map((item) => <li key={item}>{item}</li>)}</ul></div>
+                </div>
               </section>
             </section>
           </section>
