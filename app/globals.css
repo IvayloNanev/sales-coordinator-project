@@ -3057,14 +3057,16 @@ input:focus-visible,
   gap: 10px;
   align-items: end;
   margin: 18px 0;
-  padding: 16px;
-  border: 1px solid var(--line);
-  background: #f7f9fc;
+  padding: 18px;
+  border: 1px solid rgba(177, 138, 67, .48);
+  border-radius: 18px;
+  background: linear-gradient(145deg, #fffdf7, #f7efdc);
+  box-shadow: 0 12px 28px rgba(91, 65, 21, .08);
 }
 
 .report-filter-panel > div { display: grid; gap: 6px; }
 .report-filter-panel label {
-  color: var(--muted);
+  color: var(--gold-dark);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: .08em;
@@ -3074,14 +3076,32 @@ input:focus-visible,
 .report-filter-panel select,
 .report-filter-panel button {
   min-height: 40px;
-  padding: 0 10px;
-  border: 1px solid #c8d2df;
-  border-radius: 6px;
+  padding: 0 12px;
+  border: 1px solid rgba(177, 138, 67, .52);
+  border-radius: 12px;
   color: var(--ink);
-  background: white;
+  background: rgba(255, 255, 255, .88);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+.report-filter-panel input:focus-visible,
+.report-filter-panel select:focus-visible,
+.report-filter-panel button:focus-visible {
+  outline: 3px solid rgba(177, 138, 67, .18);
+  outline-offset: 2px;
+  border-color: var(--gold-dark);
+}
+.report-filter-panel input[type="date"] {
+  margin-top: 0;
+  accent-color: var(--gold-dark);
+  font: inherit;
+}
+.report-filter-panel input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: .72;
+  filter: sepia(.75) saturate(1.25) hue-rotate(355deg);
 }
 .report-filter-panel button {
-  color: #17365f;
+  color: var(--gold-dark);
   cursor: pointer;
   font-weight: 800;
 }
@@ -3103,7 +3123,8 @@ input:focus-visible,
 .period-presets button {
   min-height: 32px;
   padding: 0 12px;
-  background: #fff;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .82);
 }
 
 .comparison-strip {
