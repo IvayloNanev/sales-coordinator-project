@@ -133,8 +133,8 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
       onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setIsDragging(false); }}
       onDrop={handleDrop}
     >
-      <section className={`panel intake-upload${reviewVisible && !isSourceEditing ? " validation-background" : ""}`} aria-labelledby="files-title">
-        <div className="intake-upload-content" inert={reviewVisible && !isSourceEditing}>
+      {(!reviewVisible || isSourceEditing) && <section className="panel intake-upload" aria-labelledby="files-title">
+        <div className="intake-upload-content">
         <div className="intake-heading">
           <p className="issue-line">Sales file automation</p>
           <h1 id="files-title">Turn sales files into<br /><em>validated weekly reports.</em></h1>
@@ -174,8 +174,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
           </div>
         </div>
         </div>
-        {reviewVisible && !isSourceEditing && <div className="validation-source-overlay no-print"><span>Source validation complete</span><button type="button" onClick={() => setIsSourceEditing(true)}>Change source files</button></div>}
-      </section>
+      </section>}
 
       {reviewVisible && <aside className="intake-status incoming-audit" aria-label="Automatic incoming data review">
           <section className={`data-review-card panel${flaggedRows ? " has-errors" : " all-clear"}`} aria-labelledby="data-review-title">
@@ -189,22 +188,12 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
               <ul>{intakeAnalysis.files.map((item, index) => <li key={`${item.name}-summary-${index}`}><span className="source-file-type">{item.type}</span><div><strong>{item.name}</strong><small>{Math.max(1, Math.round(item.size / 1024)).toLocaleString()} KB · {item.startDate ? `${formatPeriod(item.startDate, item.endDate)} coverage` : "No readable date coverage"}</small></div><span className={`source-status ${item.issues ? "flag" : "pass"}`}>{item.issues ? countLabel(item.issues, "issue") : "Ready"}</span></li>)}</ul>
             </section>
 
-            <dl className="data-facts incoming-facts">
-              <div><dt>Files</dt><dd>{files.length}</dd></div>
-              <div><dt>Rows received</dt><dd>{totalRecords}</dd></div>
-              <div><dt>Columns</dt><dd>{columnCount || "—"}</dd></div>
-              <div><dt>Valid rows</dt><dd>{validation.validRecords.length}</dd></div>
-              <div className={flaggedRows ? "fact-error" : ""}><dt>Flagged rows</dt><dd>{flaggedRows}</dd></div>
-              <div className={validation.duplicateRecords ? "fact-warning" : ""}><dt>Duplicates</dt><dd>{validation.duplicateRecords}</dd></div>
-              <div><dt>Date range</dt><dd className="fact-date">{formatPeriod(startDate, endDate)}</dd></div>
-            </dl>
-
             <section className="dataset-contents" aria-labelledby="dataset-contents-title">
               <div className="dataset-contents-head">
                 <div><p className="section-number">02 / File contents</p><h3 id="dataset-contents-title">What is inside the uploaded file?</h3><p>Each of the {totalRecords.toLocaleString()} rows represents one product line within an order. An Order ID can appear on multiple rows when a customer bought more than one product.</p></div>
-                <div className={`file-error-summary ${flaggedRows ? "has-errors" : "is-clean"}`}><span aria-hidden="true">{flaggedRows ? "!" : "✓"}</span><p><strong>{flaggedRows ? countLabel(flaggedRows, "row error") : "No uploaded-file errors"}</strong><small>{flaggedRows ? "Flagged rows are listed below and excluded from reporting." : `All ${totalRecords.toLocaleString()} rows passed the required file checks.`}</small></p></div>
+                {flaggedRows ? <div className="file-error-summary has-errors"><span aria-hidden="true">!</span><p><strong>{countLabel(flaggedRows, "row error")}</strong><small>Flagged rows are listed below and excluded from reporting.</small></p></div> : null}
               </div>
-              <div className="dataset-counts" aria-label="Dataset dimensions"><p><strong>{totalRecords.toLocaleString()}</strong><span>Data rows</span></p><p><strong>{columnCount}</strong><span>Named columns</span></p><p><strong>{report.uniqueOrders.toLocaleString()}</strong><span>Distinct orders</span></p></div>
+              <div className="dataset-counts" aria-label="Dataset dimensions"><p><strong>{totalRecords.toLocaleString()}</strong><span>Data rows</span></p><p><strong>{columnCount}</strong><span>Named columns</span></p></div>
               <div className="column-dictionary">
                 <div className="incoming-section-head"><h4>Column guide</h4><small>{primaryFile.columnNames.length} names found</small></div>
                 <p className="audit-explainer">All 21 source columns are checked for missing values and expected formats. Core fields power Marcus’s weekly report; supporting fields add identifiers, geography, and shipping detail.</p>
