@@ -38,7 +38,7 @@ test("keeps the first valid order and excludes later duplicates and invalid reco
   assert.equal(result.duplicateRecords, 1);
   assert.equal(result.validRecords.length, 1);
   assert.equal(result.validRecords[0].rowNumber, 2);
-  assert.ok(result.invalidRecords.some((record) => record.error === "Duplicate order number; first valid occurrence kept"));
+  assert.ok(result.invalidRecords.some((record) => record.error === "Duplicate sales row; first valid occurrence kept"));
   assert.ok(result.invalidRecords.some((record) => record.error === "Quantity must be a positive number"));
   assert.ok(result.invalidRecords.some((record) => record.error === "Missing sales region"));
 });
@@ -61,6 +61,25 @@ test("accepts Superstore headers and keeps distinct line items from the same ord
   assert.equal(result.validRecords[0].orderNumber, "CA-100");
   assert.equal(result.validRecords[0].lineItemId, "1");
   assert.equal(calculateReport(result.validRecords).uniqueOrders, 1);
+});
+
+test("accepts SalesScope workbook-style headers without store columns", () => {
+  const csv = [
+    "Order_ID,Order_Date,Region,Sales_Rep,Customer_ID,Customer_Name,Customer_Segment,Product_Category,Product,Units_Sold,Unit_Price,Discount_Pct,Revenue,Profit",
+    "SO-10001,2026-06-13,Northeast,Marcus Lee,CUST-859,Ion Partners,Small Business,Office Supplies,Desk Organizer,2,32,10%,57.60,29.60",
+    "SO-10002,2026-06-04,Northeast,Elena Ruiz,CUST-303,Willow Consulting,Mid-Market,Software,Team Collaboration License,10,360,0%,-3600,-2700",
+  ].join("\n");
+  const parsed = parseCsvText(csv, "SalesScope.csv");
+  const result = validateRecords(parsed.records, parsed.fileErrors);
+  const report = calculateReport(result.validRecords);
+
+  assert.deepEqual(parsed.fileErrors, []);
+  assert.equal(result.validRecords.length, 2);
+  assert.equal(result.validRecords[0].customerName, "Ion Partners");
+  assert.equal(result.validRecords[0].segment, "Small Business");
+  assert.equal(report.orders[0].customerName, "Ion Partners");
+  assert.equal(new SalesDataManager(result.validRecords).records[0].discount, 0.1);
+  assert.equal(report.totalRevenue, -3542.4);
 });
 
 test("uses city and state as a stable store fallback when postal code is blank", () => {
@@ -212,20 +231,20 @@ test("sample files produce the manually verified totals", async () => {
   const result = validateRecords(records, parsed.flatMap((file) => file.fileErrors));
   const report = calculateReport(result.validRecords);
   assert.equal(records.length, 30);
-  assert.equal(result.validRecords.length, 26);
-  assert.equal(result.duplicateRecords, 1);
-  assert.equal(report.totalRevenue, 21390);
-  assert.equal(report.totalUnits, 102);
+  assert.equal(result.validRecords.length, 27);
+  assert.equal(result.duplicateRecords, 0);
+  assert.equal(report.totalRevenue, 21740);
+  assert.equal(report.totalUnits, 103);
   assert.equal(report.uniqueOrders, 26);
-  assert.equal(report.averageOrderValue, 21390 / 26);
+  assert.equal(report.averageOrderValue, 21740 / 26);
   assert.equal(report.highestRevenueStore, "Westgate");
   assert.equal(report.highestRevenueRegion, "West");
   assert.equal(report.highestRevenueProduct, "Ergonomic Chair");
   assert.equal(report.topSellingProduct, "Wireless Mouse");
-  assert.equal(report.customerCount, 26);
-  assert.equal(report.medianOrderValue, 615);
+  assert.equal(report.customerCount, 27);
+  assert.equal(report.medianOrderValue, 665);
   assert.equal(report.activeDays, 5);
-  assert.equal(report.dailyAverageRevenue, 4278);
+  assert.equal(report.dailyAverageRevenue, 4348);
   assert.equal(report.bestDay.date, "2026-07-06");
   assert.equal(report.bestDay.revenue, 9450);
   assert.equal(report.largestOrder.orderNumber, "103-001");
