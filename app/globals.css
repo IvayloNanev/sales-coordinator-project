@@ -707,11 +707,11 @@ td:last-child, th:last-child { text-align: right; }
 .row-preview summary { display: flex; justify-content: space-between; gap: 16px; padding: 13px 14px; cursor: pointer; list-style: none; font-size: 11px; font-weight: 800; }
 .row-preview summary::-webkit-details-marker { display: none; }
 .row-preview summary small { color: var(--muted); font-size: 10px; font-weight: 650; }
-.row-preview-controls { display: flex; justify-content: flex-end; padding: 8px 12px 4px; border-top: 1px solid var(--line); }
+.row-preview-controls { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 10px 14px; border-top: 1px solid var(--line); }
+.row-preview-controls p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
 .row-preview-close { display: inline-flex; align-items: center; gap: 5px; min-height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--navy); background: rgba(255, 255, 255, .58); cursor: pointer; font-size: 10px; font-weight: 800; }
 .row-preview-close span { font-size: 16px; font-weight: 400; line-height: 1; }
 .row-preview-close:hover { border-color: var(--navy); background: white; }
-.row-preview > p { margin: 0; padding: 0 14px 12px; color: var(--muted); font-size: 10px; }
 .row-preview .table-wrap { max-height: 350px; border-top: 1px solid var(--line); overflow: auto; }
 .row-preview table { min-width: 2700px; font-size: 10px; }
 .row-preview th, .row-preview td { max-width: 240px; padding: 9px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -805,6 +805,7 @@ td:last-child, th:last-child { text-align: right; }
   .dataset-contents { margin-right: 12px; margin-left: 12px; padding: 16px; }
   .dataset-counts { grid-template-columns: 1fr; }
   .row-preview summary { align-items: flex-start; flex-direction: column; }
+  .row-preview-controls { align-items: flex-start; flex-direction: column; }
   .incoming-sales-snapshot dl { grid-template-columns: 1fr 1fr; }
   .incoming-audit-grid { margin-right: 12px; margin-left: 12px; }
   .validation-detail-grid { grid-template-columns: 1fr; margin-right: 12px; margin-left: 12px; }
