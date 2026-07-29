@@ -58,6 +58,7 @@ export default function Home() {
             columnCount: parsedFile.columnCount ?? 0,
             columnNames: parsedFile.columnNames ?? [],
             previewRows: parsedFile.previewRows ?? [],
+            columnProfiles: parsedFile.columnProfiles ?? [],
             extractedRows: parsedFile.records.length,
             validRows: validRows.length,
             issues: issues.length,

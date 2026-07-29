@@ -10,6 +10,7 @@ const formatPeriod = (startDate, endDate) => {
 const countLabel = (count, singular, plural = `${singular}s`) => `${count} ${count === 1 ? singular : plural}`;
 const EXPECTED_REGIONS = new Set(["East", "West", "Central", "South"]);
 const EXPECTED_CATEGORIES = new Set(["Furniture", "Office Supplies", "Technology"]);
+const CORE_REPORT_COLUMNS = new Set(["Order ID", "Order Date", "Customer Name", "Segment", "Product Name", "Category", "Region", "Quantity", "Sales", "Discount", "Profit"]);
 const COLUMN_DETAILS = {
   "Row ID": "Unique identifier for one product line",
   "Order ID": "Order shared by one or more product lines",
@@ -62,7 +63,6 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   const [isSourceEditing, setIsSourceEditing] = useState(false);
   const reviewVisible = Boolean(validation && !isValidating);
   const snapshotRevealRef = useChartReveal(reviewVisible);
-  const coverageRevealRef = useChartReveal(reviewVisible);
   const filesReady = files.length > 0;
   const periodReady = Boolean(startDate && endDate && startDate <= endDate);
   const validationReady = Boolean(validation && validation.validRecords.length);
@@ -85,7 +85,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   const unprofitableRows = records.filter((record) => Number(record.profit) < 0).length;
   const highDiscountRows = records.filter((record) => Number(record.discount) >= 0.4).length;
   const qualityChecks = [
-    ["Required values", flaggedRows, flaggedRows ? `${countLabel(flaggedRows, "row")} excluded from reporting` : "All required order and sales values are present"],
+    ["Core reporting fields", flaggedRows, flaggedRows ? `${countLabel(flaggedRows, "row")} excluded from reporting` : "11 of 11 core weekly-report fields are complete"],
     ["Order and ship dates", invalidShipDates, invalidShipDates ? `${countLabel(invalidShipDates, "row")} has a ship date before its order date` : "No ship dates occur before order dates"],
     ["Discount values", invalidDiscounts, invalidDiscounts ? `${countLabel(invalidDiscounts, "value")} outside the 0–100% range` : "Discounts use the expected 0–100% range"],
     ["Profit values", invalidProfits, invalidProfits ? `${countLabel(invalidProfits, "value")} cannot be read as a number` : "Profit values are numeric and analysis-ready"],
@@ -216,7 +216,8 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
               <div className="dataset-counts" aria-label="Dataset dimensions"><p><strong>{totalRecords.toLocaleString()}</strong><span>Data rows</span></p><p><strong>{columnCount}</strong><span>Named columns</span></p><p><strong>{report.uniqueOrders.toLocaleString()}</strong><span>Distinct orders</span></p></div>
               <div className="column-dictionary">
                 <div className="incoming-section-head"><h4>Column guide</h4><small>{primaryFile.columnNames.length} names found</small></div>
-                <div className="table-wrap"><table><thead><tr><th>#</th><th>Column name</th><th>What it contains</th><th>Example from file</th></tr></thead><tbody>{primaryFile.columnNames.map((column, index) => <tr key={`${column}-${index}`}><td>{index + 1}</td><td><strong>{column}</strong></td><td>{COLUMN_DETAILS[column] ?? "Additional source value"}</td><td>{primaryFile.previewRows[0]?.[index] || "—"}</td></tr>)}</tbody></table></div>
+                <p className="audit-explainer">All 21 source columns are checked for missing values and expected formats. Core fields power Marcus’s weekly report; supporting fields add identifiers, geography, and shipping detail.</p>
+                <div className="table-wrap"><table><thead><tr><th>#</th><th>Column name</th><th>Use</th><th>What it contains</th><th>Coverage & format</th><th>Example</th></tr></thead><tbody>{primaryFile.columnNames.map((column, index) => { const profile = primaryFile.columnProfiles?.[index] ?? { populated: 0, total: totalRecords, invalid: 0 }; const missing = profile.total - profile.populated; return <tr key={`${column}-${index}`}><td>{index + 1}</td><td><strong>{column}</strong></td><td><span className={`column-use ${CORE_REPORT_COLUMNS.has(column) ? "core" : "supporting"}`}>{CORE_REPORT_COLUMNS.has(column) ? "Core report" : "Supporting"}</span></td><td>{COLUMN_DETAILS[column] ?? "Additional source value"}</td><td><span className={`column-health ${missing || profile.invalid ? "review" : "pass"}`}>{missing || profile.invalid ? "Review" : "Complete"}</span><small>{profile.populated.toLocaleString()} of {profile.total.toLocaleString()} populated{profile.invalid ? ` · ${profile.invalid.toLocaleString()} invalid` : ""}</small></td><td>{primaryFile.previewRows[0]?.[index] || "—"}</td></tr>; })}</tbody></table></div>
               </div>
               <details className="row-preview">
                 <summary><span>Preview the first {primaryFile.previewRows.length} data rows</span><small>Scroll sideways to inspect all {columnCount} columns +</small></summary>
@@ -229,14 +230,6 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
               <div className="incoming-section-head"><div><h3 id="incoming-sales-title">Business snapshot</h3><p>Use these totals to confirm this is the dataset and reporting scope you expected.</p></div><small>All report-ready rows</small></div>
               <dl><div><dt>Revenue</dt><dd>{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(report.totalRevenue)}</dd></div><div><dt>Orders</dt><dd>{report.uniqueOrders}</dd></div><div><dt>Units</dt><dd>{report.totalUnits}</dd></div><div><dt>Customers</dt><dd>{report.customerCount}</dd></div><div><dt>Products</dt><dd>{report.products.length}</dd></div><div><dt>Regions</dt><dd>{report.regions.length}</dd></div></dl>
             </section>
-
-            <div className="incoming-audit-grid">
-              <section className="schema-audit chart-reveal" ref={coverageRevealRef} aria-labelledby="schema-audit-title">
-                <div className="incoming-section-head"><h3 id="schema-audit-title">Field coverage</h3><small>{intakeAnalysis.coverage.filter((field) => field.present === field.total && field.total).length}/{intakeAnalysis.coverage.length} complete</small></div>
-                <p className="audit-explainer">Coverage shows how many report-ready rows contain each field Marcus needs for order tracking, performance comparisons, and discount-profit analysis.</p>
-                <ul>{intakeAnalysis.coverage.map((field, index) => { const rate = field.total ? Math.round((field.present / field.total) * 100) : 0; return <li style={{ "--chart-index": index }} key={field.label}><div><span>{field.label}</span><strong className={rate < 100 ? "coverage-warning" : ""}>{rate}%</strong></div><div><i style={{ width: `${rate}%` }} /></div><small>{field.present} of {field.total} rows populated</small></li>; })}</ul>
-              </section>
-            </div>
 
             {flaggedRows ? (
               <details className="flagged-errors" open>

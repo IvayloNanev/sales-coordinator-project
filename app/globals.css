@@ -703,13 +703,21 @@ td:last-child, th:last-child { text-align: right; }
 .dataset-counts span { margin-top: 3px; color: var(--muted); font-size: 10px; font-weight: 750; text-transform: uppercase; }
 .column-dictionary h4 { margin: 0; font-size: 16px; }
 .column-dictionary .table-wrap { max-height: 460px; border: 1px solid var(--line); border-radius: 9px; overflow: auto; }
-.column-dictionary table { min-width: 780px; font-size: 13px; }
+.column-dictionary table { min-width: 1080px; font-size: 13px; }
 .column-dictionary thead { position: sticky; top: 0; z-index: 1; }
 .column-dictionary th, .column-dictionary td { padding: 12px 11px; line-height: 1.45; }
 .column-dictionary td:first-child { width: 38px; color: var(--muted); }
 .column-dictionary td:nth-child(2) { width: 150px; }
-.column-dictionary td:nth-child(3) { min-width: 270px; color: var(--muted); }
-.column-dictionary td:last-child { min-width: 210px; }
+.column-dictionary td:nth-child(3) { width: 110px; }
+.column-dictionary td:nth-child(4) { min-width: 240px; color: var(--muted); }
+.column-dictionary td:nth-child(5) { min-width: 190px; }
+.column-dictionary td:last-child { min-width: 180px; }
+.column-use, .column-health { display: inline-block; padding: 4px 7px; border-radius: 99px; font-size: 9px; font-weight: 850; white-space: nowrap; }
+.column-use.core { color: var(--navy); background: rgba(23, 63, 138, .1); }
+.column-use.supporting { color: var(--muted); background: rgba(111, 116, 111, .1); }
+.column-health.pass { color: var(--green-dark); background: var(--green-soft); }
+.column-health.review { color: var(--red); background: var(--red-soft); }
+.column-dictionary td:nth-child(5) small { display: block; margin-top: 4px; color: var(--muted); font-size: 9px; }
 .row-preview { margin-top: 14px; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
 .row-preview[open] { position: relative; }
 .row-preview summary { display: flex; justify-content: space-between; gap: 16px; padding: 13px 14px; cursor: pointer; list-style: none; font-size: 11px; font-weight: 800; }
