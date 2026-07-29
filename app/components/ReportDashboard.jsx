@@ -127,7 +127,7 @@ function GoldDateInput({ id, label, value, min, max, onChange }) {
 export default function ReportDashboard({ records, startDate, endDate, generatedDate, fileCount, onRestart }) {
   const [view, setView] = useState("regions");
   const [orderQuery, setOrderQuery] = useState("");
-  const defaultStart = startDate && endDate ? [startDate, shiftDate(endDate, -6)].sort().at(-1) : startDate;
+  const defaultStart = startDate;
   const [filters, setFilters] = useState({
     startDate: defaultStart,
     endDate,
@@ -173,6 +173,7 @@ export default function ReportDashboard({ records, startDate, endDate, generated
     if (!query) return report.orders;
     return report.orders.filter((order) => (
       order.orderNumber.toLowerCase().includes(query)
+      || order.customerId.toLowerCase().includes(query)
       || order.customerName.toLowerCase().includes(query)
       || order.products.toLowerCase().includes(query)
       || order.salesRegion.toLowerCase().includes(query)
@@ -206,7 +207,7 @@ export default function ReportDashboard({ records, startDate, endDate, generated
     regions: { label: "Regions", rows: report.regions, columns: [{ key: "salesRegion", label: "Region" }, { key: "orders", label: "Orders" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: money }, { key: "profitMargin", label: "Margin", render: (value) => `${value.toFixed(1)}%` }] },
     categories: { label: "Categories", rows: report.categories, columns: [{ key: "productCategory", label: "Category" }, { key: "orders", label: "Orders" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: money }, { key: "profitMargin", label: "Margin", render: (value) => `${value.toFixed(1)}%` }] },
     products: { label: "Products", rows: report.products, columns: [{ key: "product", label: "Product" }, { key: "productCategory", label: "Category" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: money }, { key: "averageDiscount", label: "Avg. discount", render: (value) => `${(value * 100).toFixed(1)}%` }] },
-    orders: { label: "Orders", rows: visibleOrders, columns: [{ key: "orderNumber", label: "Order ID" }, { key: "date", label: "Date", render: shortDate }, { key: "customerName", label: "Customer" }, { key: "salesRegion", label: "Region" }, { key: "products", label: "Products" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: money }] },
+    orders: { label: "Orders", rows: visibleOrders, columns: [{ key: "orderNumber", label: "Order ID" }, { key: "date", label: "Date", render: shortDate }, { key: "customerId", label: "Customer ID" }, { key: "customerName", label: "Customer" }, { key: "salesRegion", label: "Region" }, { key: "products", label: "Products" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: money }] },
   };
 
   return (
@@ -267,7 +268,7 @@ export default function ReportDashboard({ records, startDate, endDate, generated
 
       <section className="breakdown-card expanded-breakdown">
         <div className="breakdown-head"><div><h4>Detail</h4><small>Review performance or trace an individual order.</small></div><div className="tabs" role="tablist" aria-label="Report breakdown">{Object.entries(views).map(([key, item]) => <button type="button" role="tab" aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)} key={key}>{item.label}</button>)}</div></div>
-        {view === "orders" && <div className="order-search no-print"><label htmlFor="order-search">Find an order</label><input id="order-search" type="search" value={orderQuery} onChange={(event) => setOrderQuery(event.target.value)} placeholder="Search order ID, customer, product, or region" /><span>{countLabel(visibleOrders.length, "matching order")}</span></div>}
+        {view === "orders" && <div className="order-search no-print"><label htmlFor="order-search">Find an order or customer</label><input id="order-search" type="search" value={orderQuery} onChange={(event) => setOrderQuery(event.target.value)} placeholder="Search order ID, customer ID or name, product, or region" /><span>{countLabel(visibleOrders.length, "matching order")}</span></div>}
         <DataTable rows={views[view].rows} columns={views[view].columns} label={views[view].label} />
       </section>
 

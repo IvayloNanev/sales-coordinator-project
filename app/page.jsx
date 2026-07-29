@@ -4,7 +4,7 @@ import { useState } from "react";
 import ProgressHeader from "./components/ProgressHeader";
 import ReportSetup from "./components/ReportSetup";
 import ReportDashboard from "./components/ReportDashboard";
-import { getDateRange, parseInputFile, validateRecords } from "../lib/sales";
+import { getDateRange, INPUT_LIMITS, parseInputFile, validateRecords } from "../lib/sales";
 
 const initialState = { startDate: "", endDate: "", files: [] };
 const coverageFields = [
@@ -35,17 +35,24 @@ export default function Home() {
 
     setIsValidating(true);
     try {
-      const parsed = await Promise.all(files.map(parseInputFile));
+      const acceptedFiles = files.slice(0, INPUT_LIMITS.maxFiles);
+      const overflowErrors = files.slice(INPUT_LIMITS.maxFiles).map((file) => ({
+        sourceFile: file.name,
+        rowNumber: 1,
+        orderNumber: "",
+        error: `Only ${INPUT_LIMITS.maxFiles} files can be processed at once`,
+      }));
+      const parsed = await Promise.all(acceptedFiles.map(parseInputFile));
       const records = parsed.flatMap((file) => file.records);
       const range = getDateRange(records);
-      const results = validateRecords(records, parsed.flatMap((file) => file.fileErrors));
-      setSetup({ files, startDate: range?.startDate ?? "", endDate: range?.endDate ?? "" });
+      const results = validateRecords(records, [...parsed.flatMap((file) => file.fileErrors), ...overflowErrors]);
+      setSetup({ files: acceptedFiles, startDate: range?.startDate ?? "", endDate: range?.endDate ?? "" });
       setTotalRecords(records.length);
       setValidation(results);
       setGeneratedDate("");
       const belongsToFile = (sourceFile, fileName) => sourceFile === fileName || sourceFile?.startsWith(`${fileName} ·`);
       setIntakeAnalysis({
-        files: files.map((file, index) => {
+        files: acceptedFiles.map((file, index) => {
           const parsedFile = parsed[index];
           const validRows = results.validRecords.filter((record) => belongsToFile(record.sourceFile, file.name));
           const issues = results.invalidRecords.filter((record) => belongsToFile(record.sourceFile, file.name));
@@ -64,7 +71,7 @@ export default function Home() {
             startDate: range?.startDate ?? "",
             endDate: range?.endDate ?? "",
             revenue: validRows.reduce((sum, record) => sum + record.revenue, 0),
-            orders: new Set(validRows.map((record) => record.orderNumber)).size,
+            orders: new Set(validRows.map((record) => String(record.orderNumber ?? "").trim().toLocaleLowerCase())).size,
           };
         }),
         coverage: coverageFields.map(([label, key]) => ({
