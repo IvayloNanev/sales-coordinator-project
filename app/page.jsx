@@ -89,8 +89,14 @@ export default function Home() {
     if (destination === "results" && !generatedDate) {
       setGeneratedDate(new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date()));
     }
-    window.scrollTo({ top: 0, behavior: "auto" });
+    const root = document.documentElement;
+    const previousScrollBehavior = root.style.scrollBehavior;
+    root.style.scrollBehavior = "auto";
+    window.scrollTo(0, 0);
     setPage(destination);
+    window.requestAnimationFrame(() => {
+      root.style.scrollBehavior = previousScrollBehavior;
+    });
   };
 
   const produceResults = () => navigate("results");

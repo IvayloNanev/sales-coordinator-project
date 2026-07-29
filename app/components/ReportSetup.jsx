@@ -61,6 +61,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   const [isLoadingKaggle, setIsLoadingKaggle] = useState(false);
   const [kaggleError, setKaggleError] = useState("");
   const [isSourceEditing, setIsSourceEditing] = useState(false);
+  const [isBuildingReport, setIsBuildingReport] = useState(false);
   const reviewVisible = Boolean(validation && !isValidating);
   const validationReportRef = useRef(null);
   const previousReviewVisible = useRef(false);
@@ -142,6 +143,12 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
       ["Discounts of 40% or more", "Business warning", `${highDiscountRows} rows should be reviewed for margin impact`],
     ];
     downloadTextFile("sales-data-validation.csv", rows.map((row) => row.map(csvCell).join(",")).join("\r\n"));
+  };
+
+  const buildSalesReport = () => {
+    if (!ready || isBuildingReport) return;
+    setIsBuildingReport(true);
+    window.setTimeout(onProduceResults, 480);
   };
 
   const addSelectedFiles = async (incoming) => {
@@ -226,7 +233,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
         {reviewVisible && !isSourceEditing && <div className="validation-source-overlay no-print"><span>Source validation complete</span></div>}
       </section>
 
-      {reviewVisible && <aside ref={validationReportRef} className="intake-status incoming-audit" aria-label="Automatic incoming data review">
+      {reviewVisible && <aside ref={validationReportRef} className={`intake-status incoming-audit${isBuildingReport ? " report-transitioning" : ""}`} aria-label="Automatic incoming data review">
           <section className={`data-review-card panel${flaggedRows ? " has-errors" : " all-clear"}`} aria-labelledby="data-review-title">
             <header className="data-review-head">
               <div><p className="section-number">01 / Data validation</p><h2 id="data-review-title">{flaggedRows ? "Order-data exceptions found" : "Superstore order data is ready"}</h2><p>{flaggedRows ? "Rows with missing or invalid order values stay out of the report." : "The historical order records passed validation and are ready for weekly or monthly analysis."}</p></div>
@@ -292,9 +299,10 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
         <div className="validation-actions no-print">
           <button className="button ghost" type="button" onClick={() => setIsSourceEditing(true)}>Change source file</button>
           <button className="button ghost" type="button" onClick={downloadValidationResults}>Download validation results</button>
-          <button className="button full continue-button" type="button" disabled={!ready} onClick={onProduceResults}><span>Build sales report</span><span className="continue-button-icon" aria-hidden="true">→</span></button>
+          <button className="button full continue-button" type="button" disabled={!ready || isBuildingReport} onClick={buildSalesReport}><span>{isBuildingReport ? "Opening sales report…" : "Build sales report"}</span><span className="continue-button-icon" aria-hidden="true">→</span></button>
         </div>
         {!ready && <p className="disabled-hint">Upload at least one file with a readable sales table and valid dated rows to continue.</p>}
+        {isBuildingReport && <div className="report-build-overlay" role="status"><span>Sales report ready</span></div>}
       </aside>}
     </div>
   );
