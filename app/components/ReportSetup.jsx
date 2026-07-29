@@ -74,29 +74,21 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
     ? new Set(validation.invalidRecords.map((record) => `${record.sourceFile}-${record.rowNumber}`)).size
     : 0;
   const invalidShipDates = records.filter((record) => record.shipDate && record.date && comparableDate(record.shipDate) < comparableDate(record.date)).length;
-  const invalidDiscounts = records.filter((record) => {
-    const value = Number(record.discount);
-    return record.discount !== "" && record.discount != null && (!Number.isFinite(value) || value < 0 || value > 1);
-  }).length;
-  const invalidProfits = records.filter((record) => record.profit !== "" && record.profit != null && !Number.isFinite(Number(record.profit))).length;
   const unknownRegions = records.filter((record) => record.salesRegion && !EXPECTED_REGIONS.has(record.salesRegion)).length;
   const unknownCategories = records.filter((record) => record.productCategory && !EXPECTED_CATEGORIES.has(record.productCategory)).length;
   const unprofitableRows = records.filter((record) => Number(record.profit) < 0).length;
   const highDiscountRows = records.filter((record) => Number(record.discount) >= 0.4).length;
   const qualityChecks = [
-    ["Core reporting fields", flaggedRows, flaggedRows ? `${countLabel(flaggedRows, "row")} excluded from reporting` : "11 of 11 core weekly-report fields are complete"],
     ["Order and ship dates", invalidShipDates, invalidShipDates ? `${countLabel(invalidShipDates, "row")} has a ship date before its order date` : "No ship dates occur before order dates"],
-    ["Discount values", invalidDiscounts, invalidDiscounts ? `${countLabel(invalidDiscounts, "value")} outside the 0–100% range` : "Discounts use the expected 0–100% range"],
-    ["Profit values", invalidProfits, invalidProfits ? `${countLabel(invalidProfits, "value")} cannot be read as a number` : "Profit values are numeric and analysis-ready"],
     ["Regions", unknownRegions, unknownRegions ? `${countLabel(unknownRegions, "row")} uses an unknown region` : "Only East, West, Central, and South are present"],
     ["Categories", unknownCategories, unknownCategories ? `${countLabel(unknownCategories, "row")} uses an unknown category` : "Only Furniture, Office Supplies, and Technology are present"],
+    ["Duplicate line items", validation?.duplicateRecords ?? 0, validation?.duplicateRecords ? `${countLabel(validation.duplicateRecords, "duplicate")} excluded from reporting` : "No repeated line-item identifiers were found"],
   ];
 
   const downloadValidationResults = () => {
     const rows = [
       ["Check", "Status", "Details"],
       ...qualityChecks.map(([label, count, detail]) => [label, count ? "Review" : "Passed", detail]),
-      ["Duplicate line items", validation.duplicateRecords ? "Review" : "Passed", validation.duplicateRecords ? `${validation.duplicateRecords} excluded` : "None found"],
       ["Unprofitable line items", "Business warning", `${unprofitableRows} rows should be reviewed in the report`],
       ["Discounts of 40% or more", "Business warning", `${highDiscountRows} rows should be reviewed for margin impact`],
     ];
@@ -241,7 +233,8 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
             )}
             <section className="validation-detail-grid">
               <section className="quality-checks" aria-labelledby="quality-checks-title">
-                <div className="incoming-section-head"><h3 id="quality-checks-title">Data-quality checks</h3><small>{qualityChecks.filter(([, count]) => !count).length}/{qualityChecks.length} passed</small></div>
+                <div className="incoming-section-head"><h3 id="quality-checks-title">Business-rule checks</h3><small>{qualityChecks.filter(([, count]) => !count).length}/{qualityChecks.length} passed</small></div>
+                <p className="audit-explainer">These checks test relationships and business meaning across fields. Individual column completeness and format are covered in the Column guide.</p>
                 <ul>{qualityChecks.map(([label, count, detail]) => <li key={label}><span className={count ? "flag" : "pass"}>{count ? "!" : "✓"}</span><p><strong>{label}</strong><small>{detail}</small></p></li>)}</ul>
                 <div className="business-warnings">
                   <p><strong>{unprofitableRows.toLocaleString()} unprofitable line items</strong><span>Valid business results to investigate—not file errors.</span></p>
