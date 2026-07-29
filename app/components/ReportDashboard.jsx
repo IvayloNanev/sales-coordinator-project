@@ -8,7 +8,6 @@ import {
   recordsToCsv,
   SalesDataManager,
 } from "../../lib/sales";
-import useChartReveal from "../hooks/useChartReveal";
 
 const MetricCard = ({ label, value, note, featured, trend }) => <article className={`metric-card${featured ? " featured" : ""}`}><span>{label}</span><strong>{value}</strong>{note && <small className={trend ? changeClass(trend.value) : ""}>{note}</small>}</article>;
 
@@ -42,17 +41,6 @@ const changeLabel = (change) => {
   return `${sign}${change.percentage.toFixed(1)}% vs prior`;
 };
 const changeClass = (value) => value > 0 ? "positive" : value < 0 ? "negative" : "neutral";
-
-function DailyRevenueChart({ days }) {
-  const revealRef = useChartReveal();
-  const visible = days.slice(-14);
-  const max = Math.max(...visible.map((day) => day.revenue), 1);
-  return (
-    <div className="daily-chart chart-reveal" ref={revealRef} role="img" aria-label={`Daily revenue for ${visible.length} active sales days`}>
-      <div className="daily-bars">{visible.map((day, index) => <div className="daily-column" style={{ "--chart-index": index }} key={day.date}><strong>{formatCurrency(day.revenue)}</strong><div><i style={{ height: `${Math.max(5, (day.revenue / max) * 100)}%` }} /></div><span>{shortDate(day.date)}</span><small>{day.orders} ord.</small></div>)}</div>
-    </div>
-  );
-}
 
 export default function ReportDashboard({ records, startDate, endDate, generatedDate, fileCount, onRestart }) {
   const [view, setView] = useState("regions");
@@ -97,10 +85,6 @@ export default function ReportDashboard({ records, startDate, endDate, generated
       .sort((a, b) => b.averageDiscount - a.averageDiscount || a.profit - b.profit)
       .slice(0, 5),
     [report.products],
-  );
-  const weakestRegion = useMemo(
-    () => regionDrivers.filter((driver) => driver.revenueChange < 0).sort((a, b) => a.revenueChange - b.revenueChange)[0],
-    [regionDrivers],
   );
   const visibleOrders = useMemo(() => {
     const query = orderQuery.trim().toLowerCase();
@@ -190,8 +174,6 @@ export default function ReportDashboard({ records, startDate, endDate, generated
         </div>
       </section>
 
-      <aside className="management-narrative manager-summary"><span>“</span><div><p className="eyebrow">Manager summary</p><p>{priorRecords.length ? `Sales were ${changeLabel(changes.revenue).toLowerCase()} and profit was ${changeLabel(changes.profit).toLowerCase()}. ${categoryDrivers[0] ? `${categoryDrivers[0].label} had the largest category movement at ${categoryDrivers[0].revenueChange > 0 ? "+" : ""}${money(categoryDrivers[0].revenueChange)}.` : ""} ${weakestRegion ? `${weakestRegion.label} needs regional follow-up after a ${money(Math.abs(weakestRegion.revenueChange))} sales decline.` : "No region requires decline follow-up."}` : "No comparable prior-period rows were available in the uploaded source."}</p></div></aside>
-
       <div className="metric-grid metric-grid-expanded">
         <MetricCard featured label="Sales" value={money(report.totalRevenue)} note={changeLabel(changes.revenue)} trend={changes.revenue} />
         <MetricCard featured label="Profit" value={money(report.totalProfit)} note={`${changeLabel(changes.profit)} · ${report.profitMargin.toFixed(1)}% margin`} trend={changes.profit} />
@@ -199,10 +181,6 @@ export default function ReportDashboard({ records, startDate, endDate, generated
         <MetricCard label="Orders" value={report.uniqueOrders.toLocaleString()} note={changeLabel(changes.orders)} trend={changes.orders} />
         <MetricCard label="Units sold" value={report.totalUnits.toLocaleString()} note={changeLabel(changes.units)} trend={changes.units} />
         <MetricCard label="Average order" value={money(report.averageOrderValue)} note={`Median ${money(report.medianOrderValue)}`} />
-      </div>
-
-      <div className="report-overview-single">
-        <section className="analysis-panel revenue-pulse" aria-labelledby="revenue-pulse-title"><div className="card-heading"><h4 id="revenue-pulse-title">Daily revenue</h4><span>Best · {shortDate(report.bestDay?.date)} · {money(report.bestDay?.revenue ?? 0)}</span></div><DailyRevenueChart days={report.daily} /></section>
       </div>
 
       <section className="breakdown-card expanded-breakdown">

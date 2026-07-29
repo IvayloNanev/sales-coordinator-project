@@ -3148,8 +3148,6 @@ input:focus-visible,
 .coordinator-analysis-grid .analysis-panel { min-width: 0; }
 .coordinator-analysis-grid .change-drivers { grid-column: 1 / -1; }
 .coordinator-analysis-grid .attention-panel { grid-column: 1 / -1; }
-.report-overview-single { margin-top: 16px; }
-.report-overview-single .revenue-pulse { width: 100%; }
 .metric-grid-expanded { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .driver-groups {
   display: grid;
@@ -3181,7 +3179,6 @@ input:focus-visible,
 .weekly-priorities li strong, .weekly-priorities li small { display: block; }
 .weekly-priorities li strong { font-size: 12px; line-height: 1.35; }
 .weekly-priorities li small { margin-top: 4px; color: var(--muted); font-size: 10px; line-height: 1.45; }
-.manager-summary { margin-top: 18px; }
 .order-search {
   display: grid;
   grid-template-columns: auto minmax(220px, 1fr) auto;
