@@ -222,7 +222,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
             </section>
 
             <section className="incoming-sales-snapshot chart-reveal" ref={snapshotRevealRef} aria-labelledby="incoming-sales-title">
-              <div className="incoming-section-head"><h3 id="incoming-sales-title">Dataset overview</h3><small>All report-ready rows</small></div>
+              <div className="incoming-section-head"><div><h3 id="incoming-sales-title">Business snapshot</h3><p>Use these totals to confirm this is the dataset and reporting scope you expected.</p></div><small>All report-ready rows</small></div>
               <dl><div><dt>Revenue</dt><dd>{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(report.totalRevenue)}</dd></div><div><dt>Orders</dt><dd>{report.uniqueOrders}</dd></div><div><dt>Units</dt><dd>{report.totalUnits}</dd></div><div><dt>Customers</dt><dd>{report.customerCount}</dd></div><div><dt>Products</dt><dd>{report.products.length}</dd></div><div><dt>Regions</dt><dd>{report.regions.length}</dd></div></dl>
             </section>
 
