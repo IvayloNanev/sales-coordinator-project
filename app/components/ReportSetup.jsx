@@ -104,7 +104,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
 
       const start = window.scrollY;
       const distance = destination - start;
-      const duration = 1350;
+      const duration = 900;
       const startedAt = window.performance.now();
       const guideToReport = (now) => {
         const progress = Math.min((now - startedAt) / duration, 1);
@@ -115,7 +115,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
         if (progress < 1) window.requestAnimationFrame(guideToReport);
       };
       window.requestAnimationFrame(guideToReport);
-    }, 320);
+    }, 180);
 
     return () => window.clearTimeout(timer);
   }, [reviewVisible]);
