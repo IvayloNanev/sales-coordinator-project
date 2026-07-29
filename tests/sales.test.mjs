@@ -76,6 +76,7 @@ test("accepts SalesScope workbook-style headers without store columns", () => {
   assert.deepEqual(parsed.fileErrors, []);
   assert.equal(result.validRecords.length, 2);
   assert.equal(result.validRecords[0].customerName, "Ion Partners");
+  assert.equal(report.orders[0].customerId, "CUST-859");
   assert.equal(result.validRecords[0].segment, "Small Business");
   assert.equal(report.orders[0].customerName, "Ion Partners");
   assert.equal(new SalesDataManager(result.validRecords).records[0].discount, 0.1);
