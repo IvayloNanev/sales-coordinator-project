@@ -55,7 +55,7 @@ test("accepts Superstore headers and keeps distinct line items from the same ord
   assert.deepEqual(parsed.fileErrors, []);
   assert.equal(result.validRecords.length, 2);
   assert.equal(result.duplicateRecords, 0);
-  assert.equal(result.validRecords[0].date, "11/8/2016");
+  assert.equal(result.validRecords[0].date, "2016-11-08");
   assert.equal(result.validRecords[0].storeId, "42420");
   assert.equal(result.validRecords[0].storeName, "Henderson, Kentucky");
   assert.equal(result.validRecords[0].orderNumber, "CA-100");
@@ -74,6 +74,98 @@ test("uses city and state as a stable store fallback when postal code is blank",
   assert.equal(result.validRecords.length, 1);
   assert.equal(result.validRecords[0].storeId, "Burlington, Vermont");
   assert.equal(result.validRecords[0].storeName, "Burlington, Vermont");
+});
+
+test("rejects blanks in every required reporting field", () => {
+  const base = {
+    date: "2026-07-06", storeId: "101", storeName: "Downtown", orderNumber: "A-1",
+    customerName: "Acme", product: "Desk", productCategory: "Furniture", salesRegion: "North",
+    quantitySold: "1", revenue: "100", sourceFile: "test.csv", rowNumber: 2,
+  };
+  const result = validateRecords([
+    { ...base, orderNumber: "NO-STORE", storeName: "   " },
+    { ...base, orderNumber: "NO-CATEGORY", productCategory: "" },
+  ]);
+
+  assert.equal(result.validRecords.length, 0);
+  assert.ok(result.invalidRecords.some((record) => record.error === "Missing store name"));
+  assert.ok(result.invalidRecords.some((record) => record.error === "Missing product category"));
+});
+
+test("groups spelling and whitespace variants without changing the first display label", () => {
+  const base = {
+    date: "2026-07-06", storeId: "101", storeName: "Downtown", customerName: "Acme",
+    product: "Desk", productCategory: "Furniture", salesRegion: "North",
+    quantitySold: "2", revenue: "10", sourceFile: "test.csv",
+  };
+  const result = validateRecords([
+    { ...base, lineItemId: "1", orderNumber: "ORDER-1", rowNumber: 2 },
+    {
+      ...base, lineItemId: "2", orderNumber: "order-1", rowNumber: 3,
+      storeName: " downtown ", customerName: " acme ", product: " desk ",
+      productCategory: " furniture ", salesRegion: " north ", quantitySold: "10", revenue: "20",
+    },
+  ]);
+  const report = calculateReport(result.validRecords);
+
+  assert.equal(result.validRecords.length, 2);
+  assert.equal(report.uniqueOrders, 1);
+  assert.equal(report.regions.length, 1);
+  assert.equal(report.regions[0].salesRegion, "North");
+  assert.equal(report.products.length, 1);
+  assert.equal(report.products[0].product, "Desk");
+  assert.equal(report.customers.length, 1);
+  assert.equal(report.totalUnits, 12);
+});
+
+test("converts numeric text before calculating and sorting", () => {
+  const base = {
+    date: "2026-07-06", storeId: "101", storeName: "Downtown", customerName: "Acme",
+    productCategory: "Furniture", salesRegion: "North", sourceFile: "test.csv",
+  };
+  const result = validateRecords([
+    { ...base, lineItemId: "1", orderNumber: "A-1", product: "Desk", quantitySold: "2", revenue: "$1,000.50", rowNumber: 2 },
+    { ...base, lineItemId: "2", orderNumber: "A-2", product: "Chair", quantitySold: "10", revenue: "200", rowNumber: 3 },
+  ]);
+  const report = calculateReport(result.validRecords);
+
+  assert.equal(result.validRecords[0].quantitySold, 2);
+  assert.equal(result.validRecords[0].revenue, 1000.5);
+  assert.equal(report.totalUnits, 12);
+  assert.equal(report.totalRevenue, 1200.5);
+  assert.equal(report.topSellingProduct, "Chair");
+});
+
+test("deduplicates line-item IDs case-insensitively while preserving repeated order IDs", () => {
+  const base = {
+    date: "2026-07-06", storeId: "101", storeName: "Downtown", customerName: "Acme",
+    product: "Desk", productCategory: "Furniture", salesRegion: "North",
+    quantitySold: "1", revenue: "100", sourceFile: "test.csv", orderNumber: "A-1",
+  };
+  const result = validateRecords([
+    { ...base, lineItemId: "ROW-1", rowNumber: 2 },
+    { ...base, lineItemId: "row-1", rowNumber: 3 },
+    { ...base, lineItemId: "ROW-2", rowNumber: 4 },
+  ]);
+
+  assert.equal(result.validRecords.length, 2);
+  assert.equal(result.duplicateRecords, 1);
+  assert.ok(result.invalidRecords.some((record) => record.error === "Duplicate line item; first valid occurrence kept"));
+});
+
+test("scopes line-item IDs to their source file", () => {
+  const base = {
+    date: "2026-07-06", storeId: "101", storeName: "Downtown", customerName: "Acme",
+    product: "Desk", productCategory: "Furniture", salesRegion: "North",
+    quantitySold: "1", revenue: "100", lineItemId: "1",
+  };
+  const result = validateRecords([
+    { ...base, sourceFile: "store-101.csv", orderNumber: "A-1", rowNumber: 2 },
+    { ...base, sourceFile: "store-102.csv", orderNumber: "A-2", rowNumber: 2 },
+  ]);
+
+  assert.equal(result.validRecords.length, 2);
+  assert.equal(result.duplicateRecords, 0);
 });
 
 test("requires customer names on every reportable row", () => {
