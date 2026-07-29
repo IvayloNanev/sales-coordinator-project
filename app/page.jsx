@@ -35,17 +35,16 @@ export default function Home() {
     root.style.overflowAnchor = "none";
     body.style.overflowAnchor = "none";
     window.scrollTo(0, 0);
-    const frame = window.requestAnimationFrame(() => {
-      window.scrollTo(0, 0);
-    });
+    const anchorAtTop = window.setInterval(() => window.scrollTo(0, 0), 40);
     const timer = window.setTimeout(() => {
+      window.clearInterval(anchorAtTop);
       window.scrollTo(0, 0);
       root.style.scrollBehavior = previousScrollBehavior;
       root.style.overflowAnchor = previousRootAnchor;
       body.style.overflowAnchor = previousBodyAnchor;
-    }, 180);
+    }, 640);
     return () => {
-      window.cancelAnimationFrame(frame);
+      window.clearInterval(anchorAtTop);
       window.clearTimeout(timer);
     };
   }, [page]);
