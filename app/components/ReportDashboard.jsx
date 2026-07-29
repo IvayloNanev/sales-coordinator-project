@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   calculateReport,
   comparisonDrivers,
@@ -41,6 +41,88 @@ const changeLabel = (change) => {
   return `${sign}${change.percentage.toFixed(1)}% vs prior`;
 };
 const changeClass = (value) => value > 0 ? "positive" : value < 0 ? "negative" : "neutral";
+const monthTitle = (value) => new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+}).format(new Date(`${value}-01T00:00:00Z`));
+const dateButtonLabel = (value) => new Intl.DateTimeFormat("en-US", {
+  month: "2-digit",
+  day: "2-digit",
+  year: "numeric",
+  timeZone: "UTC",
+}).format(new Date(`${value}T00:00:00Z`));
+const changeMonth = (value, offset) => {
+  const date = new Date(`${value}-01T00:00:00Z`);
+  date.setUTCMonth(date.getUTCMonth() + offset);
+  return date.toISOString().slice(0, 7);
+};
+
+function GoldDateInput({ id, label, value, min, max, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [visibleMonth, setVisibleMonth] = useState(value.slice(0, 7));
+  const rootRef = useRef(null);
+  const firstDay = new Date(`${visibleMonth}-01T00:00:00Z`);
+  const daysInMonth = new Date(Date.UTC(firstDay.getUTCFullYear(), firstDay.getUTCMonth() + 1, 0)).getUTCDate();
+  const leadingDays = firstDay.getUTCDay();
+  const dayCells = [
+    ...Array.from({ length: leadingDays }, (_, index) => ({ spacer: true, key: `before-${index}` })),
+    ...Array.from({ length: daysInMonth }, (_, index) => {
+      const iso = `${visibleMonth}-${String(index + 1).padStart(2, "0")}`;
+      return { iso, day: index + 1, disabled: iso < min || iso > max, key: iso };
+    }),
+  ];
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const handlePointerDown = (event) => {
+      if (!rootRef.current?.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [open]);
+
+  const chooseDate = (nextValue) => {
+    onChange(nextValue);
+    setVisibleMonth(nextValue.slice(0, 7));
+    setOpen(false);
+  };
+
+  return (
+    <div className="gold-date-field" ref={rootRef} onKeyDown={(event) => {
+      if (event.key === "Escape") setOpen(false);
+    }}>
+      <label id={`${id}-label`} htmlFor={id}>{label}</label>
+      <button
+        id={id}
+        type="button"
+        className="gold-date-trigger"
+        aria-expanded={open}
+        aria-controls={`${id}-calendar`}
+        aria-labelledby={`${id}-label ${id}`}
+        onClick={() => {
+          setVisibleMonth(value.slice(0, 7));
+          setOpen((current) => !current);
+        }}
+      >
+        <span>{dateButtonLabel(value)}</span><i className="gold-calendar-icon" aria-hidden="true" />
+      </button>
+      {open && (
+        <div className="gold-date-popover" id={`${id}-calendar`} role="dialog" aria-label={`${label} date calendar`}>
+          <header>
+            <button type="button" aria-label="Previous month" onClick={() => setVisibleMonth((current) => changeMonth(current, -1))}>‹</button>
+            <strong>{monthTitle(visibleMonth)}</strong>
+            <button type="button" aria-label="Next month" onClick={() => setVisibleMonth((current) => changeMonth(current, 1))}>›</button>
+          </header>
+          <div className="gold-calendar-weekdays" aria-hidden="true">{["S", "M", "T", "W", "T", "F", "S"].map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}</div>
+          <div className="gold-calendar-days">{dayCells.map((cell) => cell.spacer
+            ? <span key={cell.key} />
+            : <button type="button" key={cell.key} disabled={cell.disabled} className={cell.iso === value ? "selected" : ""} aria-label={dateButtonLabel(cell.iso)} aria-pressed={cell.iso === value} onClick={() => chooseDate(cell.iso)}>{cell.day}</button>)}</div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ReportDashboard({ records, startDate, endDate, generatedDate, fileCount, onRestart }) {
   const [view, setView] = useState("regions");
@@ -132,8 +214,8 @@ export default function ReportDashboard({ records, startDate, endDate, generated
       <header className="report-heading report-heading-expanded"><div><p className="issue-line">{shortDate(filters.startDate)} — {shortDate(filters.endDate)}</p><h3 id="report-title">Sales<br /><em>performance.</em></h3></div><div className="generated-meta"><strong>{generatedDate}</strong><small>{countLabel(fileCount, "file")} · {countLabel(report.activeDays, "active day")}</small></div></header>
 
       <section className="report-filter-panel no-print" aria-label="Report filters">
-        <div><label htmlFor="report-start">From</label><input id="report-start" type="date" min={startDate} max={filters.endDate} value={filters.startDate} onChange={(event) => updateFilter("startDate", event.target.value)} /></div>
-        <div><label htmlFor="report-end">To</label><input id="report-end" type="date" min={filters.startDate} max={endDate} value={filters.endDate} onChange={(event) => updateFilter("endDate", event.target.value)} /></div>
+        <GoldDateInput id="report-start" label="From" min={startDate} max={filters.endDate} value={filters.startDate} onChange={(value) => updateFilter("startDate", value)} />
+        <GoldDateInput id="report-end" label="To" min={filters.startDate} max={endDate} value={filters.endDate} onChange={(value) => updateFilter("endDate", value)} />
         <div><label htmlFor="report-region">Region</label><select id="report-region" value={filters.region} onChange={(event) => updateFilter("region", event.target.value)}><option value="">All regions</option>{options.regions.map((option) => <option key={option}>{option}</option>)}</select></div>
         <div><label htmlFor="report-category">Category</label><select id="report-category" value={filters.category} onChange={(event) => updateFilter("category", event.target.value)}><option value="">All categories</option>{options.categories.map((option) => <option key={option}>{option}</option>)}</select></div>
         <div><label htmlFor="report-segment">Segment</label><select id="report-segment" value={filters.segment} onChange={(event) => updateFilter("segment", event.target.value)}><option value="">All segments</option>{options.segments.map((option) => <option key={option}>{option}</option>)}</select></div>

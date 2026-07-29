@@ -3090,20 +3090,112 @@ input:focus-visible,
   outline-offset: 2px;
   border-color: var(--gold-dark);
 }
-.report-filter-panel input[type="date"] {
-  margin-top: 0;
-  accent-color: var(--gold-dark);
-  font: inherit;
-}
-.report-filter-panel input[type="date"]::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-  opacity: .72;
-  filter: sepia(.75) saturate(1.25) hue-rotate(355deg);
-}
 .report-filter-panel button {
   color: var(--gold-dark);
   cursor: pointer;
   font-weight: 800;
+}
+.gold-date-field { position: relative; }
+.report-filter-panel .gold-date-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  text-align: left;
+}
+.gold-calendar-icon {
+  position: relative;
+  width: 15px;
+  height: 14px;
+  border: 1.5px solid var(--gold-dark);
+  border-radius: 4px;
+}
+.gold-calendar-icon::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 0;
+  left: 0;
+  border-top: 1.5px solid var(--gold-dark);
+}
+.gold-calendar-icon::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: 3px;
+  width: 7px;
+  height: 4px;
+  border-right: 1.5px solid var(--gold-dark);
+  border-left: 1.5px solid var(--gold-dark);
+}
+.gold-date-popover {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 288px;
+  padding: 14px;
+  border: 1px solid rgba(177, 138, 67, .62);
+  border-radius: 16px;
+  background: #fffdf7;
+  box-shadow: 0 18px 42px rgba(65, 43, 14, .2);
+}
+.gold-date-popover header {
+  display: grid;
+  grid-template-columns: 32px 1fr 32px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.gold-date-popover header strong {
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+  text-align: center;
+}
+.report-filter-panel .gold-date-popover header button,
+.report-filter-panel .gold-calendar-days button {
+  display: grid;
+  place-items: center;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+}
+.report-filter-panel .gold-date-popover header button {
+  border: 1px solid rgba(177, 138, 67, .45);
+  background: #fbf4e3;
+  font-size: 20px;
+}
+.gold-calendar-weekdays,
+.gold-calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.gold-calendar-weekdays { margin-bottom: 4px; }
+.gold-calendar-weekdays span {
+  color: var(--gold-dark);
+  font-size: 9px;
+  font-weight: 850;
+  text-align: center;
+}
+.report-filter-panel .gold-calendar-days button {
+  color: var(--ink);
+  font-size: 11px;
+}
+.report-filter-panel .gold-calendar-days button:hover:not(:disabled) { background: #f3e5bd; }
+.report-filter-panel .gold-calendar-days button.selected {
+  color: white;
+  background: var(--gold-dark);
+  box-shadow: 0 4px 10px rgba(104, 76, 25, .22);
+}
+.report-filter-panel .gold-calendar-days button:disabled {
+  color: #b7afa0;
+  cursor: not-allowed;
+  opacity: .45;
 }
 .report-filter-panel .period-presets {
   display: flex;
