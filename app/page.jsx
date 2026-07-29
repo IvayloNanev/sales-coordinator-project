@@ -64,7 +64,7 @@ export default function Home() {
             startDate: range?.startDate ?? "",
             endDate: range?.endDate ?? "",
             revenue: validRows.reduce((sum, record) => sum + record.revenue, 0),
-            orders: new Set(validRows.map((record) => record.orderNumber)).size,
+            orders: new Set(validRows.map((record) => String(record.orderNumber ?? "").trim().toLocaleLowerCase())).size,
           };
         }),
         coverage: coverageFields.map(([label, key]) => ({
