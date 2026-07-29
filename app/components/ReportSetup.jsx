@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const formatPeriod = (startDate, endDate) => {
   if (!startDate || !endDate) return "Waiting for valid dates";
@@ -53,12 +53,13 @@ const comparableDate = (value) => {
   return text;
 };
 
-export default function ReportSetup({ startDate, endDate, files, validation, totalRecords, intakeAnalysis, isValidating, onFiles, onProduceResults }) {
+export default function ReportSetup({ startDate, endDate, files, validation, totalRecords, intakeAnalysis, isValidating, onFiles, onReplaceFiles, onProduceResults }) {
   const [isDragging, setIsDragging] = useState(false);
   const [isLoadingKaggle, setIsLoadingKaggle] = useState(false);
   const [kaggleError, setKaggleError] = useState("");
   const [isSourceEditing, setIsSourceEditing] = useState(false);
   const [isBuildingReport, setIsBuildingReport] = useState(false);
+  const validationTitleRef = useRef(null);
   const reviewVisible = Boolean(validation && !isValidating);
   const filesReady = files.length > 0;
   const periodReady = Boolean(startDate && endDate && startDate <= endDate);
@@ -81,6 +82,11 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
     ["Duplicate line items", validation?.duplicateRecords ?? 0, validation?.duplicateRecords ? `${countLabel(validation.duplicateRecords, "duplicate")} excluded from reporting` : isSalesScopeImport ? "Repeated order IDs are resolved during import" : "No repeated line-item identifiers were found"],
   ];
 
+  useEffect(() => {
+    if (!reviewVisible) return;
+    validationTitleRef.current?.focus({ preventScroll: true });
+  }, [reviewVisible]);
+
   const downloadValidationResults = () => {
     const rows = [
       ["Check", "Status", "Details"],
@@ -95,13 +101,13 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
     if (!ready || isBuildingReport) return;
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     setIsBuildingReport(true);
-    onProduceResults();
+    window.setTimeout(onProduceResults, 120);
   };
 
   const addSelectedFiles = async (incoming) => {
     const scrollTop = window.scrollY;
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
-    await onFiles(incoming);
+    await (isSourceEditing ? onReplaceFiles(incoming) : onFiles(incoming));
     setIsSourceEditing(false);
     requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo({ top: scrollTop, behavior: "auto" })));
   };
@@ -139,8 +145,17 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
       onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setIsDragging(false); }}
       onDrop={handleDrop}
     >
-      <section className={`panel intake-upload${reviewVisible && !isSourceEditing ? " validation-background" : ""}`} aria-labelledby="files-title">
-        <div className="intake-upload-content" inert={reviewVisible && !isSourceEditing}>
+      <section className={`panel intake-upload${reviewVisible && !isSourceEditing ? " source-complete-panel" : ""}`} aria-labelledby="files-title" aria-busy={isValidating}>
+        {reviewVisible && !isSourceEditing ? (
+          <div className="completed-source-summary">
+            <div>
+              <p className="section-number">Source complete</p>
+              <h1 id="files-title">{countLabel(files.length, "file")} validated and ready</h1>
+              <p>{totalRecords.toLocaleString()} rows checked · {formatPeriod(startDate, endDate)}</p>
+            </div>
+            <button className="button secondary" type="button" onClick={() => setIsSourceEditing(true)}>Replace source files</button>
+          </div>
+        ) : <div className="intake-upload-content">
         <div className="intake-heading">
           <p className="issue-line">Sales file automation</p>
           <h1 id="files-title">Turn sales files into <em>validated weekly reports.</em></h1>
@@ -176,7 +191,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
               </div>
               <p><strong>Best formats:</strong> CSV or Excel exports.</p>
               <details>
-                <summary>View the 11 reporting fields <span aria-hidden="true">+</span></summary>
+                <summary>View the 11 reporting fields</summary>
                 <ul>
                   {["Order date", "Order ID", "Customer", "Segment", "Product", "Category", "Region", "Quantity", "Sales", "Discount", "Profit"].map((column) => <li key={column}>{column}</li>)}
                 </ul>
@@ -184,14 +199,14 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
             </section>
           </div>
         </div>
-        </div>
-        {reviewVisible && !isSourceEditing && <div className="validation-source-overlay no-print"><span>Source validation complete</span></div>}
+        </div>}
+        {isValidating && <div className="local-processing-status" role="status"><span aria-hidden="true" />Reading dates and checking every row…</div>}
       </section>
 
       {reviewVisible && <aside className={`intake-status incoming-audit${isBuildingReport ? " report-transitioning" : ""}`} aria-label="Automatic incoming data review">
           <section className={`data-review-card panel${flaggedRows ? " has-errors" : " all-clear"}`} aria-labelledby="data-review-title">
             <header className="data-review-head">
-              <div><p className="section-number">Data validation</p><h2 id="data-review-title">{flaggedRows ? "Review the flagged rows" : "Sales data is ready"}</h2><p>{flaggedRows ? "Invalid rows will stay out of the report; valid rows can still be analyzed." : "The file passed validation and can be used for weekly or monthly reporting."}</p></div>
+              <div><p className="section-number">Data validation</p><h2 id="data-review-title" ref={validationTitleRef} tabIndex="-1">{flaggedRows ? "Review the flagged rows" : "Sales data is ready"}</h2><p>{flaggedRows ? "Invalid rows will stay out of the report; valid rows can still be analyzed." : "The file passed validation and can be used for weekly or monthly reporting."}</p></div>
               <span className={`review-badge ${flaggedRows ? "warning" : "success"}`}>{flaggedRows ? `${flaggedRows} flagged` : "Passed"}</span>
             </header>
 
@@ -203,16 +218,16 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
                 <p><span>Errors</span><strong className={flaggedRows ? "negative" : ""}>{flaggedRows.toLocaleString()}</strong></p>
                 <p><span>Date coverage</span><strong>{formatPeriod(startDate, endDate)}</strong></p>
               </div>
-              <button className="button primary validation-primary-action" type="button" disabled={!ready || isBuildingReport} onClick={buildSalesReport}>{isBuildingReport ? "Opening…" : "Build sales report"}<span aria-hidden="true">→</span></button>
+              <button className="button primary validation-primary-action" type="button" aria-busy={isBuildingReport} disabled={!ready || isBuildingReport} onClick={buildSalesReport}>{isBuildingReport ? "Opening report…" : "Build sales report"}<span aria-hidden="true">→</span></button>
             </section>
 
             <details className="validation-disclosure source-file-summary">
-              <summary><span>{intakeAnalysis.files.length === 1 ? "Source file" : "Source files"}</span><small>{countLabel(intakeAnalysis.files.length, "file")} · view details +</small></summary>
+              <summary><span>{intakeAnalysis.files.length === 1 ? "Source file" : "Source files"}</span><small>{countLabel(intakeAnalysis.files.length, "file")} · view details</small></summary>
               <ul>{intakeAnalysis.files.map((item, index) => <li key={`${item.name}-summary-${index}`}><span className="source-file-type">{item.type}</span><div><strong>{item.name}</strong><small>{Math.max(1, Math.round(item.size / 1024)).toLocaleString()} KB · {item.startDate ? `${formatPeriod(item.startDate, item.endDate)} coverage` : "No readable date coverage"}</small></div><span className={`source-status ${item.issues ? "flag" : "pass"}`}>{item.issues ? countLabel(item.issues, "issue") : "Ready"}</span></li>)}</ul>
             </details>
 
             <details className="validation-disclosure dataset-contents">
-              <summary><span>Columns and sample data</span><small>{columnCount} columns · {primaryFile.previewRows.length} preview rows +</small></summary>
+              <summary><span>Columns and sample data</span><small>{columnCount} columns · {primaryFile.previewRows.length} preview rows</small></summary>
               <div className="validation-disclosure-body">
               <div className="dataset-contents-head">
                 <div><h3>What is inside the uploaded file?</h3><p>Each row represents one product line within an order. An Order ID can appear on multiple rows when a customer bought more than one product.</p></div>
@@ -224,7 +239,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
                 <div className="table-wrap"><table><thead><tr><th>#</th><th>Column name</th><th>Use</th><th>What it contains</th><th>Coverage & format</th><th>Example</th></tr></thead><tbody>{primaryFile.columnNames.map((column, index) => { const profile = primaryFile.columnProfiles?.[index] ?? { populated: 0, total: totalRecords, invalid: 0 }; const missing = isSalesScopeImport ? 0 : profile.total - profile.populated; return <tr key={`${column}-${index}`}><td>{index + 1}</td><td><strong>{column}</strong></td><td><span className={`column-use ${CORE_REPORT_COLUMNS.has(column) ? "core" : "supporting"}`}>{CORE_REPORT_COLUMNS.has(column) ? "Core report" : "Supporting"}</span></td><td>{COLUMN_DETAILS[column] ?? "Additional source value"}</td><td><span className={`column-health ${missing || profile.invalid ? "review" : "pass"}`}>{missing || profile.invalid ? "Review" : "Complete"}</span><small>{profile.populated.toLocaleString()} of {profile.total.toLocaleString()} populated{profile.invalid ? ` · ${profile.invalid.toLocaleString()} invalid` : ""}</small></td><td>{primaryFile.previewRows[0]?.[index] || "—"}</td></tr>; })}</tbody></table></div>
               </div>
               <details className="row-preview">
-                <summary><span>Preview the first {primaryFile.previewRows.length} data rows</span><small>Scroll sideways to inspect all {columnCount} columns +</small></summary>
+                <summary><span>Preview the first {primaryFile.previewRows.length} data rows</span><small>Scroll sideways to inspect all {columnCount} columns</small></summary>
                 <div className="row-preview-controls"><p>This is a read-only preview of the uploaded source. Long product names may extend the table horizontally.</p><button className="row-preview-close" type="button" aria-label="Close data row preview" onClick={(event) => event.currentTarget.closest("details")?.removeAttribute("open")}><span aria-hidden="true">×</span> Close</button></div>
                 <div className="table-wrap"><table><thead><tr><th>Row</th>{primaryFile.columnNames.map((column, index) => <th key={`${column}-preview-${index}`}>{column}</th>)}</tr></thead><tbody>{primaryFile.previewRows.map((row, rowIndex) => <tr key={`preview-${rowIndex}`}><td>{rowIndex + 1}</td>{row.map((value, columnIndex) => <td key={`preview-${rowIndex}-${columnIndex}`}>{value || "—"}</td>)}</tr>)}</tbody></table></div>
               </details>
@@ -240,7 +255,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
             ) : null}
             <div className="validation-detail-grid">
               <details className="validation-disclosure quality-checks">
-                <summary><span>Business-rule checks</span><small>{qualityChecks.filter(([, count]) => !count).length}/{qualityChecks.length} passed +</small></summary>
+                <summary><span>Business-rule checks</span><small>{qualityChecks.filter(([, count]) => !count).length}/{qualityChecks.length} passed</small></summary>
                 <div className="validation-disclosure-body">
                 <p className="audit-explainer">These checks test relationships and business meaning across fields. Individual column completeness and format are covered in the Column guide.</p>
                 <ul>{qualityChecks.map(([label, count, detail]) => <li key={label}><span className={count ? "flag" : "pass"}>{count ? "!" : "✓"}</span><p><strong>{label}</strong><small>{detail}</small></p></li>)}</ul>
@@ -252,7 +267,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
               </details>
 
               <details className="validation-disclosure reporting-scope">
-                <summary><span>Reporting scope</span><small>Supported questions and source limitations +</small></summary>
+                <summary><span>Reporting scope</span><small>Supported questions and source limitations</small></summary>
                 <div className="validation-disclosure-body">
                 <p className="audit-explainer">This separates the questions Marcus can answer with this file from the operational information the source does not contain.</p>
                 <div className="reporting-scope-grid">
@@ -264,8 +279,8 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
             </div>
           </section>
         <div className="validation-actions no-print">
-          <button className="button ghost" type="button" onClick={() => setIsSourceEditing(true)}>Change source file</button>
-          <button className="button ghost" type="button" onClick={downloadValidationResults}>Download validation results</button>
+          <p>Replacing the source starts validation again; your current report remains until new files are selected.</p>
+          <button className="button secondary" type="button" onClick={downloadValidationResults}>Download validation results</button>
         </div>
         {!ready && <p className="disabled-hint">Upload at least one file with a readable sales table and valid dated rows to continue.</p>}
       </aside>}

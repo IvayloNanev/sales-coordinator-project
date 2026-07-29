@@ -22,6 +22,7 @@ export default function Home() {
   const [isValidating, setIsValidating] = useState(false);
   const [intakeAnalysis, setIntakeAnalysis] = useState({ files: [], coverage: [] });
   const resultsReady = Boolean(validation?.validRecords.length && setup.startDate && setup.endDate);
+  const hasCurrentWork = Boolean(setup.files.length || validation || page === "results");
 
   const analyzeFiles = async (files) => {
     if (!files.length) {
@@ -115,11 +116,11 @@ export default function Home() {
 
   return (
     <div className="app-shell">
-      <ProgressHeader onNavigate={restart} />
-      <main id="main" className="two-page-main">
+      <ProgressHeader onNavigate={() => navigate("upload")} hasCurrentWork={hasCurrentWork} />
+      <main id="main" className="two-page-main" aria-busy={isValidating}>
         {page === "upload" ? (
           <section className="page-view intake-page" aria-label="Upload and validate sales files">
-            <ReportSetup {...setup} validation={validation} totalRecords={totalRecords} intakeAnalysis={intakeAnalysis} isValidating={isValidating} onFiles={addFiles} onProduceResults={produceResults} />
+            <ReportSetup {...setup} validation={validation} totalRecords={totalRecords} intakeAnalysis={intakeAnalysis} isValidating={isValidating} onFiles={addFiles} onReplaceFiles={analyzeFiles} onProduceResults={produceResults} />
           </section>
         ) : (
           <section className="page-view results-page" aria-label="Generated sales results">
@@ -128,7 +129,9 @@ export default function Home() {
         )}
       </main>
       <footer className="site-footer no-print"><strong>Salescraft</strong><span>Local processing · No uploads</span></footer>
-      {isValidating && <div className="loading-overlay" role="status"><span />Reading dates and checking every row…</div>}
+      <p className="sr-only" role="status" aria-live="polite">
+        {isValidating ? "Reading dates and checking every row." : validation ? "Validation complete." : ""}
+      </p>
     </div>
   );
 }

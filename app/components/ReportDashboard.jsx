@@ -61,7 +61,10 @@ const changeMonth = (value, offset) => {
 function GoldDateInput({ id, label, value, min, max, onChange }) {
   const [open, setOpen] = useState(false);
   const [visibleMonth, setVisibleMonth] = useState(value.slice(0, 7));
+  const [focusedDate, setFocusedDate] = useState(value);
   const rootRef = useRef(null);
+  const triggerRef = useRef(null);
+  const calendarRef = useRef(null);
   const firstDay = new Date(`${visibleMonth}-01T00:00:00Z`);
   const daysInMonth = new Date(Date.UTC(firstDay.getUTCFullYear(), firstDay.getUTCMonth() + 1, 0)).getUTCDate();
   const leadingDays = firstDay.getUTCDay();
@@ -82,42 +85,80 @@ function GoldDateInput({ id, label, value, min, max, onChange }) {
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    requestAnimationFrame(() => {
+      calendarRef.current?.querySelector(`[data-date="${focusedDate}"]`)?.focus();
+    });
+  }, [focusedDate, open, visibleMonth]);
+
+  const closeCalendar = (restoreFocus = true) => {
+    setOpen(false);
+    if (restoreFocus) requestAnimationFrame(() => triggerRef.current?.focus());
+  };
+
   const chooseDate = (nextValue) => {
     onChange(nextValue);
     setVisibleMonth(nextValue.slice(0, 7));
-    setOpen(false);
+    setFocusedDate(nextValue);
+    closeCalendar();
+  };
+
+  const moveCalendarFocus = (nextValue) => {
+    const bounded = nextValue < min ? min : nextValue > max ? max : nextValue;
+    setFocusedDate(bounded);
+    setVisibleMonth(bounded.slice(0, 7));
+  };
+
+  const handleDayKeyDown = (event, iso) => {
+    const offsets = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
+    if (offsets[event.key]) {
+      event.preventDefault();
+      moveCalendarFocus(shiftDate(iso, offsets[event.key]));
+    }
+    if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      const day = new Date(`${iso}T00:00:00Z`).getUTCDay();
+      moveCalendarFocus(shiftDate(iso, event.key === "Home" ? -day : 6 - day));
+    }
   };
 
   return (
     <div className="gold-date-field" ref={rootRef} onKeyDown={(event) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape" && open) {
+        event.preventDefault();
+        closeCalendar();
+      }
     }}>
       <label id={`${id}-label`} htmlFor={id}>{label}</label>
       <button
         id={id}
+        ref={triggerRef}
         type="button"
         className="gold-date-trigger"
+        aria-pressed={open}
         aria-expanded={open}
         aria-controls={`${id}-calendar`}
         aria-labelledby={`${id}-label ${id}`}
         onClick={() => {
           setVisibleMonth(value.slice(0, 7));
+          setFocusedDate(value);
           setOpen((current) => !current);
         }}
       >
         <span>{dateButtonLabel(value)}</span><i className="gold-calendar-icon" aria-hidden="true" />
       </button>
       {open && (
-        <div className="gold-date-popover" id={`${id}-calendar`} role="dialog" aria-label={`${label} date calendar`}>
+        <div className="gold-date-popover" ref={calendarRef} id={`${id}-calendar`} role="dialog" aria-modal="false" aria-label={`${label} date calendar`}>
           <header>
             <button type="button" aria-label="Previous month" onClick={() => setVisibleMonth((current) => changeMonth(current, -1))}>‹</button>
             <strong>{monthTitle(visibleMonth)}</strong>
             <button type="button" aria-label="Next month" onClick={() => setVisibleMonth((current) => changeMonth(current, 1))}>›</button>
           </header>
           <div className="gold-calendar-weekdays" aria-hidden="true">{["S", "M", "T", "W", "T", "F", "S"].map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}</div>
-          <div className="gold-calendar-days">{dayCells.map((cell) => cell.spacer
+          <div className="gold-calendar-days" role="group" aria-label={monthTitle(visibleMonth)}>{dayCells.map((cell) => cell.spacer
             ? <span key={cell.key} />
-            : <button type="button" key={cell.key} disabled={cell.disabled} className={cell.iso === value ? "selected" : ""} aria-label={dateButtonLabel(cell.iso)} aria-pressed={cell.iso === value} onClick={() => chooseDate(cell.iso)}>{cell.day}</button>)}</div>
+            : <button type="button" data-date={cell.iso} tabIndex={cell.iso === focusedDate ? 0 : -1} key={cell.key} disabled={cell.disabled} className={cell.iso === value ? "selected" : ""} aria-label={dateButtonLabel(cell.iso)} aria-pressed={cell.iso === value} aria-current={cell.iso === new Date().toISOString().slice(0, 10) ? "date" : undefined} onKeyDown={(event) => handleDayKeyDown(event, cell.iso)} onFocus={() => setFocusedDate(cell.iso)} onClick={() => chooseDate(cell.iso)}>{cell.day}</button>)}</div>
         </div>
       )}
     </div>
@@ -127,6 +168,10 @@ function GoldDateInput({ id, label, value, min, max, onChange }) {
 export default function ReportDashboard({ records, startDate, endDate, generatedDate, fileCount, onRestart }) {
   const [view, setView] = useState("regions");
   const [orderQuery, setOrderQuery] = useState("");
+  const [resultsUpdating, setResultsUpdating] = useState(false);
+  const reportTitleRef = useRef(null);
+  const tabRefs = useRef([]);
+  const hasMountedResults = useRef(false);
   const defaultStart = startDate;
   const [filters, setFilters] = useState({
     startDate: defaultStart,
@@ -179,20 +224,63 @@ export default function ReportDashboard({ records, startDate, endDate, generated
       || order.salesRegion.toLowerCase().includes(query)
     ));
   }, [report.orders, orderQuery]);
+  const presetRanges = useMemo(() => ({
+    week: { startDate: shiftDate(endDate, -6) < startDate ? startDate : shiftDate(endDate, -6), endDate },
+    month: { startDate: calendarMonthRange(endDate).startDate < startDate ? startDate : calendarMonthRange(endDate).startDate, endDate },
+    "previous-month": {
+      startDate: calendarMonthRange(endDate, -1).startDate < startDate ? startDate : calendarMonthRange(endDate, -1).startDate,
+      endDate: calendarMonthRange(endDate, -1).endDate > endDate ? endDate : calendarMonthRange(endDate, -1).endDate,
+    },
+    all: { startDate, endDate },
+  }), [endDate, startDate]);
+  const activePeriod = Object.entries(presetRanges).find(([, range]) => range.startDate === filters.startDate && range.endDate === filters.endDate)?.[0] ?? "";
+  const filtersDirty = filters.startDate !== defaultStart || filters.endDate !== endDate || Boolean(filters.region || filters.category || filters.segment);
+  const activeFilterText = [
+    `${shortDate(filters.startDate)} to ${shortDate(filters.endDate)}`,
+    filters.region || "All regions",
+    filters.category || "All categories",
+    filters.segment || "All segments",
+    countLabel(report.uniqueOrders, "matching order"),
+  ].join(" · ");
+
+  useEffect(() => {
+    reportTitleRef.current?.focus({ preventScroll: true });
+  }, []);
+
+  useEffect(() => {
+    if (!hasMountedResults.current) {
+      hasMountedResults.current = true;
+      return undefined;
+    }
+    setResultsUpdating(true);
+    const timer = window.setTimeout(() => setResultsUpdating(false), 160);
+    return () => window.clearTimeout(timer);
+  }, [filters, orderQuery, view]);
   const money = (value) => formatCurrency(value);
   const updateFilter = (field, value) => setFilters((current) => ({ ...current, [field]: value }));
   const resetFilters = () => setFilters({ startDate: defaultStart, endDate, region: "", category: "", segment: "" });
   const applyPeriod = (period) => {
-    let range;
-    if (period === "week") range = { startDate: shiftDate(endDate, -6), endDate };
-    if (period === "month") range = { ...calendarMonthRange(endDate), endDate };
-    if (period === "previous-month") range = calendarMonthRange(endDate, -1);
-    if (period === "all") range = { startDate, endDate };
+    const range = presetRanges[period];
     setFilters((current) => ({
       ...current,
-      startDate: range.startDate < startDate ? startDate : range.startDate,
-      endDate: range.endDate > endDate ? endDate : range.endDate,
+      startDate: range.startDate,
+      endDate: range.endDate,
     }));
+  };
+  const handleTabKeyDown = (event, index) => {
+    const keys = { ArrowRight: 1, ArrowLeft: -1 };
+    let nextIndex = index;
+    if (keys[event.key]) nextIndex = (index + keys[event.key] + Object.keys(views).length) % Object.keys(views).length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = Object.keys(views).length - 1;
+    else return;
+    event.preventDefault();
+    const nextView = Object.keys(views)[nextIndex];
+    setView(nextView);
+    tabRefs.current[nextIndex]?.focus();
+  };
+  const confirmRestart = () => {
+    if (window.confirm("Start a new report? This will clear the current files, validation, and filters.")) onRestart();
   };
   const downloadFilteredCsv = () => {
     const blob = new Blob([recordsToCsv(currentRecords)], { type: "text/csv;charset=utf-8" });
@@ -212,7 +300,7 @@ export default function ReportDashboard({ records, startDate, endDate, generated
 
   return (
     <section className="report-shell expanded-report" aria-labelledby="report-title">
-      <header className="report-heading report-heading-expanded"><div><p className="issue-line">{shortDate(filters.startDate)} — {shortDate(filters.endDate)}</p><h3 id="report-title">Sales<br /><em>performance.</em></h3></div><div className="generated-meta"><strong>{generatedDate}</strong><small>{countLabel(fileCount, "file")} · {countLabel(report.activeDays, "active day")}</small></div></header>
+      <header className="report-heading report-heading-expanded"><div><p className="issue-line">{shortDate(filters.startDate)} — {shortDate(filters.endDate)}</p><h3 id="report-title" ref={reportTitleRef} tabIndex="-1">Sales<br /><em>performance.</em></h3></div><div className="generated-meta"><strong>{generatedDate}</strong><small>{countLabel(fileCount, "file")} · {countLabel(report.activeDays, "active day")}</small></div></header>
 
       <section className="report-filter-panel no-print" aria-label="Report filters">
         <GoldDateInput id="report-start" label="From" min={startDate} max={filters.endDate} value={filters.startDate} onChange={(value) => updateFilter("startDate", value)} />
@@ -220,16 +308,18 @@ export default function ReportDashboard({ records, startDate, endDate, generated
         <div><label htmlFor="report-region">Region</label><select id="report-region" value={filters.region} onChange={(event) => updateFilter("region", event.target.value)}><option value="">All regions</option>{options.regions.map((option) => <option key={option}>{option}</option>)}</select></div>
         <div><label htmlFor="report-category">Category</label><select id="report-category" value={filters.category} onChange={(event) => updateFilter("category", event.target.value)}><option value="">All categories</option>{options.categories.map((option) => <option key={option}>{option}</option>)}</select></div>
         <div><label htmlFor="report-segment">Segment</label><select id="report-segment" value={filters.segment} onChange={(event) => updateFilter("segment", event.target.value)}><option value="">All segments</option>{options.segments.map((option) => <option key={option}>{option}</option>)}</select></div>
-        <button type="button" onClick={resetFilters}>Reset</button>
+        <button type="button" disabled={!filtersDirty} onClick={resetFilters}>Reset filters</button>
         <div className="period-presets" aria-label="Quick reporting periods">
           <span>Quick periods</span>
-          <button type="button" onClick={() => applyPeriod("week")}>Latest week</button>
-          <button type="button" onClick={() => applyPeriod("month")}>Latest month</button>
-          <button type="button" onClick={() => applyPeriod("previous-month")}>Previous month</button>
-          <button type="button" onClick={() => applyPeriod("all")}>All dates</button>
+          <button type="button" aria-pressed={activePeriod === "week"} onClick={() => applyPeriod("week")}>Latest week</button>
+          <button type="button" aria-pressed={activePeriod === "month"} onClick={() => applyPeriod("month")}>Latest month</button>
+          <button type="button" aria-pressed={activePeriod === "previous-month"} onClick={() => applyPeriod("previous-month")}>Previous month</button>
+          <button type="button" aria-pressed={activePeriod === "all"} onClick={() => applyPeriod("all")}>All dates</button>
         </div>
+        <p className="active-filter-summary" aria-live="polite"><strong>Showing</strong> {activeFilterText}</p>
       </section>
 
+      <div className={`report-results${resultsUpdating ? " is-updating" : ""}`}>
       <section className="monday-briefing" aria-labelledby="monday-briefing-title">
         <div className="briefing-heading"><div><p className="eyebrow">Marcus’s Monday priorities</p><h4 id="monday-briefing-title">Monday briefing</h4></div><span>Sales totals, period movement, and margin risk</span></div>
         <div className="briefing-grid">
@@ -267,12 +357,13 @@ export default function ReportDashboard({ records, startDate, endDate, generated
       </div>
 
       <section className="breakdown-card expanded-breakdown">
-        <div className="breakdown-head"><div><h4>Detail</h4><small>Review performance or trace an individual order.</small></div><div className="tabs" role="tablist" aria-label="Report breakdown">{Object.entries(views).map(([key, item]) => <button type="button" role="tab" aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)} key={key}>{item.label}</button>)}</div></div>
+        <div className="breakdown-head"><div><h4>Detail</h4><small>Review performance or trace an individual order.</small></div><div className="tabs" role="tablist" aria-label="Report breakdown">{Object.entries(views).map(([key, item], index) => <button id={`report-tab-${key}`} ref={(element) => { tabRefs.current[index] = element; }} type="button" role="tab" aria-controls={`report-panel-${key}`} aria-selected={view === key} tabIndex={view === key ? 0 : -1} className={view === key ? "active" : ""} onKeyDown={(event) => handleTabKeyDown(event, index)} onClick={() => setView(key)} key={key}>{item.label}</button>)}</div></div>
         {view === "orders" && <div className="order-search no-print"><label htmlFor="order-search">Find an order or customer</label><input id="order-search" type="search" value={orderQuery} onChange={(event) => setOrderQuery(event.target.value)} placeholder="Search order ID, customer ID or name, product, or region" /><span>{countLabel(visibleOrders.length, "matching order")}</span></div>}
-        <DataTable rows={views[view].rows} columns={views[view].columns} label={views[view].label} />
+        <div id={`report-panel-${view}`} role="tabpanel" aria-labelledby={`report-tab-${view}`} tabIndex="0"><DataTable rows={views[view].rows} columns={views[view].columns} label={views[view].label} /></div>
       </section>
+      </div>
 
-      <section className="report-actions no-print"><div><button className="button ghost" onClick={onRestart}>New report</button></div><div><button className="button secondary" type="button" onClick={downloadFilteredCsv}>Download filtered CSV</button><button className="button primary" type="button" onClick={() => window.print()}>Print / Save PDF</button></div></section>
+      <section className="report-actions no-print"><div className="restart-action"><button className="button ghost danger-action" onClick={confirmRestart}>Start a new report</button><small>Clears the current files and report.</small></div><div><button className="button secondary" type="button" onClick={downloadFilteredCsv}>Download filtered CSV</button><button className="button primary" type="button" onClick={() => window.print()}>Print / Save PDF</button></div></section>
     </section>
   );
 }
