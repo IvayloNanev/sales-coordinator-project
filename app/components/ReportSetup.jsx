@@ -67,7 +67,6 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   const periodReady = Boolean(startDate && endDate && startDate <= endDate);
   const validationReady = Boolean(validation && validation.validRecords.length);
   const ready = filesReady && periodReady && validationReady && !isValidating;
-  const usesLineItems = Boolean(validation?.validRecords.some((record) => record.lineItemId));
   const records = validation?.validRecords ?? [];
   const primaryFile = intakeAnalysis.files[0] ?? { columnNames: [], previewRows: [] };
   const columnCount = Math.max(0, ...intakeAnalysis.files.map((file) => file.columnCount ?? 0));
@@ -240,8 +239,6 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
             ) : (
               <div className="all-clear-strip"><span aria-hidden="true">✓</span><div><strong>No errors found</strong><small>Every row will be included in the report.</small></div></div>
             )}
-            <section className="coordinator-readiness" aria-label="Sales coordinator readiness checks"><div><span className={startDate && endDate ? "pass" : "flag"}>{startDate && endDate ? "✓" : "!"}</span><p><strong>Historical coverage</strong><small>{startDate && endDate ? `${formatPeriod(startDate, endDate)} available for period analysis` : "A valid order-date range is missing"}</small></p></div><div><span className={validation.duplicateRecords ? "flag" : "pass"}>{validation.duplicateRecords ? "!" : "✓"}</span><p><strong>{usesLineItems ? "Line-item identity" : "Order identity"}</strong><small>{validation.duplicateRecords ? `${countLabel(validation.duplicateRecords, usesLineItems ? "duplicate line item" : "duplicate order")} excluded; first valid occurrence kept` : usesLineItems ? "Line items are unique; repeated order IDs are grouped into orders" : "Order IDs are unique"}</small></p></div><div><span className={report.regions.length ? "pass" : "flag"}>{report.regions.length ? "✓" : "!"}</span><p><strong>Regional coverage</strong><small>{report.regions.length ? `${countLabel(report.regions.length, "region")} available for comparison` : "Region is required for performance reporting"}</small></p></div><div><span className={validation.validRecords.length ? "pass" : "flag"}>{validation.validRecords.length ? "✓" : "!"}</span><p><strong>Analysis readiness</strong><small>{validation.validRecords.length ? `${countLabel(validation.validRecords.length, "row")} can be analyzed` : "No valid rows can be reported"}</small></p></div></section>
-
             <section className="validation-detail-grid">
               <section className="quality-checks" aria-labelledby="quality-checks-title">
                 <div className="incoming-section-head"><h3 id="quality-checks-title">Data-quality checks</h3><small>{qualityChecks.filter(([, count]) => !count).length}/{qualityChecks.length} passed</small></div>
