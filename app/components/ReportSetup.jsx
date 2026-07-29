@@ -133,8 +133,8 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
       onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setIsDragging(false); }}
       onDrop={handleDrop}
     >
-      {(!reviewVisible || isSourceEditing) && <section className="panel intake-upload" aria-labelledby="files-title">
-        <div className="intake-upload-content">
+      <section className={`panel intake-upload${reviewVisible && !isSourceEditing ? " validation-background" : ""}`} aria-labelledby="files-title">
+        <div className="intake-upload-content" inert={reviewVisible && !isSourceEditing}>
         <div className="intake-heading">
           <p className="issue-line">Sales file automation</p>
           <h1 id="files-title">Turn sales files into<br /><em>validated weekly reports.</em></h1>
@@ -174,7 +174,8 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
           </div>
         </div>
         </div>
-      </section>}
+        {reviewVisible && !isSourceEditing && <div className="validation-source-overlay no-print"><span>Source validation complete</span></div>}
+      </section>
 
       {reviewVisible && <aside className="intake-status incoming-audit" aria-label="Automatic incoming data review">
           <section className={`data-review-card panel${flaggedRows ? " has-errors" : " all-clear"}`} aria-labelledby="data-review-title">
