@@ -12,7 +12,7 @@ import {
 const MetricCard = ({ label, value, note, featured, trend }) => <article className={`metric-card${featured ? " featured" : ""}`}><span>{label}</span><strong>{value}</strong>{note && <small className={trend ? changeClass(trend.value) : ""}>{note}</small>}</article>;
 
 function DataTable({ columns, rows, label }) {
-  return <div className="table-wrap"><table><caption className="sr-only">{label} sales breakdown</caption><thead><tr>{columns.map((column) => <th scope="col" key={column.key}>{column.label}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={`${label}-${index}`}>{columns.map((column) => <td key={column.key}>{column.render ? column.render(row[column.key], row) : row[column.key]}</td>)}</tr>)}</tbody></table></div>;
+  return <div className="table-wrap"><table><caption className="sr-only">{label} sales breakdown</caption><thead><tr>{columns.map((column) => <th scope="col" key={column.key}>{column.label}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={`${label}-${index}`}>{columns.map((column) => { const value = column.render ? column.render(row[column.key], row) : row[column.key]; return <td key={column.key} title={typeof value === "string" && value.length > 36 ? value : undefined}>{value}</td>; })}</tr>)}</tbody></table></div>;
 }
 
 const shortDate = (value) => {
@@ -250,7 +250,7 @@ export default function ReportDashboard({ records, startDate, endDate, generated
 
           <section className="analysis-panel discount-risk-panel" aria-labelledby="discount-risk-title">
             <div className="card-heading"><h5 id="discount-risk-title">Highest-discount products</h5><span>Margin effect</span></div>
-            <div className="compact-analysis-table"><table><thead><tr><th>Product</th><th>Avg. discount</th><th>Profit</th><th>Margin</th></tr></thead><tbody>{highestDiscountProducts.map((product) => <tr className={product.profit < 0 ? "risk-row" : ""} key={product.product}><td>{product.product}</td><td>{(product.averageDiscount * 100).toFixed(1)}%</td><td className={changeClass(product.profit)}>{money(product.profit)}</td><td className={changeClass(product.profitMargin)}>{product.profitMargin.toFixed(1)}%</td></tr>)}</tbody></table></div>
+            <div className="compact-analysis-table"><table><thead><tr><th>Product</th><th>Avg. discount</th><th>Profit</th><th>Margin</th></tr></thead><tbody>{highestDiscountProducts.map((product) => <tr className={product.profit < 0 ? "risk-row" : ""} key={product.product}><td title={product.product}>{product.product}</td><td>{(product.averageDiscount * 100).toFixed(1)}%</td><td className={changeClass(product.profit)}>{money(product.profit)}</td><td className={changeClass(product.profitMargin)}>{product.profitMargin.toFixed(1)}%</td></tr>)}</tbody></table></div>
             {!highestDiscountProducts.length && <p className="briefing-empty">No discounted products appear in this period.</p>}
           </section>
         </div>

@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import ProgressHeader from "./components/ProgressHeader";
 import ReportSetup from "./components/ReportSetup";
 import ReportDashboard from "./components/ReportDashboard";
-import { calculateReport, getDateRange, parseInputFile, validateRecords } from "../lib/sales";
+import { getDateRange, parseInputFile, validateRecords } from "../lib/sales";
 
 const initialState = { startDate: "", endDate: "", files: [] };
 const coverageFields = [
@@ -20,9 +20,7 @@ export default function Home() {
   const [totalRecords, setTotalRecords] = useState(0);
   const [generatedDate, setGeneratedDate] = useState("");
   const [isValidating, setIsValidating] = useState(false);
-  const [isReportRevealing, setIsReportRevealing] = useState(false);
   const [intakeAnalysis, setIntakeAnalysis] = useState({ files: [], coverage: [] });
-  const report = useMemo(() => calculateReport(validation?.validRecords ?? []), [validation]);
   const resultsReady = Boolean(validation?.validRecords.length && setup.startDate && setup.endDate);
 
   const analyzeFiles = async (files) => {
@@ -94,9 +92,7 @@ export default function Home() {
   };
 
   const produceResults = () => {
-    setIsReportRevealing(true);
     navigate("results");
-    window.setTimeout(() => setIsReportRevealing(false), 720);
   };
 
   const restart = () => {
@@ -105,10 +101,9 @@ export default function Home() {
     setTotalRecords(0);
     setGeneratedDate("");
     setIsValidating(false);
-    setIsReportRevealing(false);
     setIntakeAnalysis({ files: [], coverage: [] });
     setPage("upload");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: "auto" });
   };
 
   return (
@@ -117,17 +112,16 @@ export default function Home() {
       <main id="main" className="two-page-main">
         {page === "upload" ? (
           <section className="page-view intake-page" aria-label="Upload and validate sales files">
-            <ReportSetup {...setup} validation={validation} totalRecords={totalRecords} intakeAnalysis={intakeAnalysis} report={report} isValidating={isValidating} onFiles={addFiles} onProduceResults={produceResults} />
+            <ReportSetup {...setup} validation={validation} totalRecords={totalRecords} intakeAnalysis={intakeAnalysis} isValidating={isValidating} onFiles={addFiles} onProduceResults={produceResults} />
           </section>
         ) : (
           <section className="page-view results-page" aria-label="Generated sales results">
-            <ReportDashboard report={report} records={validation?.validRecords ?? []} startDate={setup.startDate} endDate={setup.endDate} generatedDate={generatedDate} fileCount={setup.files.length} totalRecords={totalRecords} validRowCount={validation?.validRecords.length ?? 0} issueCount={validation?.invalidRecords.length ?? 0} duplicateRecords={validation?.duplicateRecords ?? 0} onRestart={restart} />
+            <ReportDashboard records={validation?.validRecords ?? []} startDate={setup.startDate} endDate={setup.endDate} generatedDate={generatedDate} fileCount={setup.files.length} onRestart={restart} />
           </section>
         )}
       </main>
       <footer className="site-footer no-print"><strong>Salescraft</strong><span>Local processing · No uploads</span></footer>
       {isValidating && <div className="loading-overlay" role="status"><span />Reading dates and checking every row…</div>}
-      {isReportRevealing && <div className="report-page-cover" role="status"><span>Sales report ready</span></div>}
     </div>
   );
 }
