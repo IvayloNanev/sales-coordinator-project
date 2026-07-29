@@ -775,8 +775,9 @@ td:last-child, th:last-child { text-align: right; }
 .coordinator-readiness strong { font-size: 9px; }
 .coordinator-readiness small { margin-top: 3px; color: var(--muted); font-size: 7px; line-height: 1.35; }
 .incoming-audit > .continue-button { width: min(360px, 100%); justify-self: end; }
-.validation-detail-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 14px; margin: 0 24px 24px; }
+.validation-detail-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 14px; margin: 18px 24px 24px; }
 .quality-checks, .reporting-scope { min-width: 0; padding: 21px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, .24); }
+.quality-checks { padding: 24px; }
 .quality-checks ul, .reporting-readiness ul, .dataset-limitations ul { margin: 0; padding: 0; list-style: none; }
 .quality-checks ul { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .quality-checks li { display: grid; grid-template-columns: 27px 1fr; align-items: center; gap: 9px; padding: 10px; border: 1px solid var(--line); border-radius: 9px; }
