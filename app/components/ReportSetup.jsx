@@ -92,6 +92,8 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
     previousReviewVisible.current = reviewVisible;
     if (!justOpened || !validationReportRef.current) return undefined;
 
+    let animationFrame;
+    let previousScrollBehavior;
     const timer = window.setTimeout(() => {
       const target = validationReportRef.current;
       if (!target) return;
@@ -106,18 +108,30 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
       const distance = destination - start;
       const duration = 720;
       const startedAt = window.performance.now();
+      previousScrollBehavior = document.documentElement.style.scrollBehavior;
+      document.documentElement.style.scrollBehavior = "auto";
       const guideToReport = (now) => {
         const progress = Math.min((now - startedAt) / duration, 1);
         const eased = progress < 0.5
           ? 4 * progress * progress * progress
           : 1 - Math.pow(-2 * progress + 2, 3) / 2;
         window.scrollTo(0, start + distance * eased);
-        if (progress < 1) window.requestAnimationFrame(guideToReport);
+        if (progress < 1) {
+          animationFrame = window.requestAnimationFrame(guideToReport);
+        } else {
+          document.documentElement.style.scrollBehavior = previousScrollBehavior;
+        }
       };
-      window.requestAnimationFrame(guideToReport);
+      animationFrame = window.requestAnimationFrame(guideToReport);
     }, 180);
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      if (animationFrame) window.cancelAnimationFrame(animationFrame);
+      if (previousScrollBehavior !== undefined) {
+        document.documentElement.style.scrollBehavior = previousScrollBehavior;
+      }
+    };
   }, [reviewVisible]);
 
   const downloadValidationResults = () => {
