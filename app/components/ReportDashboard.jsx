@@ -3,7 +3,6 @@ import {
   calculateReport,
   comparisonDrivers,
   formatCurrency,
-  generateSummary,
   performanceChange,
   previousPeriod,
   recordsToCsv,
@@ -11,7 +10,7 @@ import {
 } from "../../lib/sales";
 import useChartReveal from "../hooks/useChartReveal";
 
-const MetricCard = ({ label, value, note, featured }) => <article className={`metric-card${featured ? " featured" : ""}`}><span>{label}</span><strong>{value}</strong>{note && <small>{note}</small>}</article>;
+const MetricCard = ({ label, value, note, featured, trend }) => <article className={`metric-card${featured ? " featured" : ""}`}><span>{label}</span><strong>{value}</strong>{note && <small className={trend ? changeClass(trend.value) : ""}>{note}</small>}</article>;
 
 function DataTable({ columns, rows, label }) {
   return <div className="table-wrap"><table><caption className="sr-only">{label} sales breakdown</caption><thead><tr>{columns.map((column) => <th scope="col" key={column.key}>{column.label}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={`${label}-${index}`}>{columns.map((column) => <td key={column.key}>{column.render ? column.render(row[column.key], row) : row[column.key]}</td>)}</tr>)}</tbody></table></div>;
@@ -44,14 +43,6 @@ const changeLabel = (change) => {
 };
 const changeClass = (value) => value > 0 ? "positive" : value < 0 ? "negative" : "neutral";
 
-const ComparisonCard = ({ label, value, change, formatter = (item) => item.toLocaleString() }) => (
-  <article className="comparison-card">
-    <span>{label}</span>
-    <strong>{formatter(value)}</strong>
-    <small className={changeClass(change.value)}>{changeLabel(change)}</small>
-  </article>
-);
-
 function DailyRevenueChart({ days }) {
   const revealRef = useChartReveal();
   const visible = days.slice(-14);
@@ -63,27 +54,7 @@ function DailyRevenueChart({ days }) {
   );
 }
 
-function RankedBars({ rows, labelKey, valueKey = "revenue", valueFormatter = formatCurrency }) {
-  const revealRef = useChartReveal();
-  const visible = rows.slice(0, 6);
-  const max = Math.max(...visible.map((row) => row[valueKey]), 1);
-  return <div className="ranked-bars chart-reveal" ref={revealRef}>{visible.map((row, index) => <div className="ranked-row" style={{ "--chart-index": index }} key={`${row[labelKey]}-${index}`}><div><span>{String(index + 1).padStart(2, "0")}</span><strong>{row[labelKey]}</strong><b>{valueFormatter(row[valueKey])}</b></div><div><i style={{ width: `${(row[valueKey] / max) * 100}%` }} /></div></div>)}</div>;
-}
-
-function CategoryMix({ categories, totalRevenue }) {
-  const revealRef = useChartReveal();
-  const colors = ["#17365f", "#b88a35", "#315b84", "#d7b86a", "#6f7f91", "#8a6828"];
-  const shares = categories.slice(0, 6).map((category) => totalRevenue ? (category.revenue / totalRevenue) * 100 : 0);
-  const stops = shares.map((share, index) => {
-    const start = shares.slice(0, index).reduce((sum, value) => sum + value, 0);
-    return `${colors[index]} ${start}% ${start + share}%`;
-  });
-  const covered = shares.reduce((sum, value) => sum + value, 0);
-  if (covered < 100) stops.push(`#e7ece9 ${covered}% 100%`);
-  return <div className="mix-layout chart-reveal" ref={revealRef}><div className="donut" style={{ "--donut-background": `conic-gradient(${stops.join(", ")})` }} role="img" aria-label="Revenue share by product category"><span><strong>{categories.length}</strong><small>categories</small></span></div><ul>{categories.slice(0, 6).map((category, index) => <li key={category.productCategory}><i style={{ background: colors[index] }} /><span>{category.productCategory}</span><strong>{totalRevenue ? Math.round((category.revenue / totalRevenue) * 100) : 0}%</strong></li>)}</ul></div>;
-}
-
-export default function ReportDashboard({ records, startDate, endDate, generatedDate, fileCount, totalRecords, validRowCount, onRestart }) {
+export default function ReportDashboard({ records, startDate, endDate, generatedDate, fileCount, onRestart }) {
   const [view, setView] = useState("regions");
   const [orderQuery, setOrderQuery] = useState("");
   const defaultStart = startDate && endDate ? [startDate, shiftDate(endDate, -6)].sort().at(-1) : startDate;
@@ -142,9 +113,6 @@ export default function ReportDashboard({ records, startDate, endDate, generated
     ));
   }, [report.orders, orderQuery]);
   const money = (value) => formatCurrency(value);
-  const percent = (value) => `${Math.round(value)}%`;
-  const excluded = Math.max(0, totalRecords - validRowCount);
-  const cleanRate = totalRecords ? (validRowCount / totalRecords) * 100 : 0;
   const updateFilter = (field, value) => setFilters((current) => ({ ...current, [field]: value }));
   const resetFilters = () => setFilters({ startDate: defaultStart, endDate, region: "", category: "", segment: "" });
   const applyPeriod = (period) => {
@@ -195,34 +163,15 @@ export default function ReportDashboard({ records, startDate, endDate, generated
         </div>
       </section>
 
-      <section className="report-quality-strip" aria-label="Source data coverage"><div><span className="ready-dot" /><strong>{percent(cleanRate)} clean row coverage</strong></div><p>{countLabel(validRowCount, "valid row")} from {totalRecords} received{excluded ? ` · ${countLabel(excluded, "row")} excluded` : " · no rows excluded"}</p></section>
-
-      <section className="comparison-strip" aria-label="Current period compared with prior period">
-        <header><div><span>Period comparison</span><strong>{shortDate(priorRange?.startDate)}—{shortDate(priorRange?.endDate)}</strong></div><small>{priorRecords.length ? `${priorRecords.length.toLocaleString()} prior line items` : "No prior-period rows in this source"}</small></header>
-        <div>
-          <ComparisonCard label="Sales" value={report.totalRevenue} change={changes.revenue} formatter={money} />
-          <ComparisonCard label="Profit" value={report.totalProfit} change={changes.profit} formatter={money} />
-          <ComparisonCard label="Orders" value={report.uniqueOrders} change={changes.orders} />
-          <ComparisonCard label="Units" value={report.totalUnits} change={changes.units} />
-        </div>
-      </section>
+      <aside className="management-narrative manager-summary"><span>“</span><div><p className="eyebrow">Manager summary</p><p>{priorRecords.length ? `Sales were ${changeLabel(changes.revenue).toLowerCase()} and profit was ${changeLabel(changes.profit).toLowerCase()}. ${categoryDrivers[0] ? `${categoryDrivers[0].label} had the largest category movement at ${categoryDrivers[0].revenueChange > 0 ? "+" : ""}${money(categoryDrivers[0].revenueChange)}.` : ""} ${attentionGroups.regions[0] ? `${attentionGroups.regions[0].salesRegion} needs regional follow-up after a ${money(Math.abs(attentionGroups.regions[0].revenueChange))} sales decline.` : "No region requires decline follow-up."}` : "No comparable prior-period rows were available in the uploaded source."}</p></div></aside>
 
       <div className="metric-grid metric-grid-expanded">
-        <MetricCard featured label="Total revenue" value={money(report.totalRevenue)} note={`${money(report.dailyAverageRevenue)} per active day`} />
-        <MetricCard featured label="Total profit" value={money(report.totalProfit)} note={`${report.profitMargin.toFixed(1)}% profit margin`} />
+        <MetricCard featured label="Sales" value={money(report.totalRevenue)} note={changeLabel(changes.revenue)} trend={changes.revenue} />
+        <MetricCard featured label="Profit" value={money(report.totalProfit)} note={`${changeLabel(changes.profit)} · ${report.profitMargin.toFixed(1)}% margin`} trend={changes.profit} />
         <MetricCard label="Average discount" value={`${(report.averageDiscount * 100).toFixed(1)}%`} note="Across visible line items" />
-        <MetricCard label="Orders" value={report.uniqueOrders.toLocaleString()} note={countLabel(report.activeDays, "active sales day")} />
-        <MetricCard label="Units sold" value={report.totalUnits.toLocaleString()} note={`${report.unitsPerOrder.toFixed(1)} per order`} />
+        <MetricCard label="Orders" value={report.uniqueOrders.toLocaleString()} note={changeLabel(changes.orders)} trend={changes.orders} />
+        <MetricCard label="Units sold" value={report.totalUnits.toLocaleString()} note={changeLabel(changes.units)} trend={changes.units} />
         <MetricCard label="Average order" value={money(report.averageOrderValue)} note={`Median ${money(report.medianOrderValue)}`} />
-      </div>
-
-      <div className="report-overview-single">
-        <section className="analysis-panel revenue-pulse" aria-labelledby="revenue-pulse-title"><div className="card-heading"><h4 id="revenue-pulse-title">Daily revenue</h4><span>Best · {shortDate(report.bestDay?.date)} · {money(report.bestDay?.revenue ?? 0)}</span></div><DailyRevenueChart days={report.daily} /></section>
-      </div>
-
-      <div className="report-secondary-grid">
-        <section className="analysis-panel" aria-labelledby="region-performance-title"><div className="card-heading"><h4 id="region-performance-title">Regions</h4><span>{report.regions.length} total</span></div><RankedBars rows={report.regions} labelKey="salesRegion" /></section>
-        <section className="analysis-panel" aria-labelledby="category-mix-title"><div className="card-heading"><h4 id="category-mix-title">Category mix</h4><span>{countLabel(report.categories.length, "category", "categories")}</span></div><CategoryMix categories={report.categories} totalRevenue={report.totalRevenue} /></section>
       </div>
 
       <div className="coordinator-analysis-grid">
@@ -234,12 +183,13 @@ export default function ReportDashboard({ records, startDate, endDate, generated
           </div>
         </section>
 
-        <section className="analysis-panel attention-panel" aria-labelledby="attention-title">
-          <div className="card-heading"><h4 id="attention-title">Needs attention</h4><span>Declining sales or negative profit</span></div>
-          <div className="attention-groups">
-            <div><h5>Regions</h5>{attentionGroups.regions.length ? <ul>{attentionGroups.regions.map((group) => <li key={group.salesRegion}><span><strong>{group.salesRegion}</strong><small>{money(group.profit)} profit</small></span><b className={changeClass(group.revenueChange)}>{group.revenueChange > 0 ? "+" : ""}{money(group.revenueChange)} vs prior</b></li>)}</ul> : <p>No regional flags for this period.</p>}</div>
-            <div><h5>Categories</h5>{attentionGroups.categories.length ? <ul>{attentionGroups.categories.map((group) => <li key={group.productCategory}><span><strong>{group.productCategory}</strong><small>{money(group.profit)} profit</small></span><b className={changeClass(group.revenueChange)}>{group.revenueChange > 0 ? "+" : ""}{money(group.revenueChange)} vs prior</b></li>)}</ul> : <p>No category flags for this period.</p>}</div>
-          </div>
+        <section className="analysis-panel attention-panel weekly-priorities" aria-labelledby="attention-title">
+          <div className="card-heading"><h4 id="attention-title">This week’s priorities</h4><span>Recommended manager follow-up</span></div>
+          <ol>
+            <li><span>1</span><p><strong>{attentionGroups.regions[0] ? `Review ${attentionGroups.regions[0].salesRegion} performance` : "No regional decline to escalate"}</strong><small>{attentionGroups.regions[0] ? `${money(Math.abs(attentionGroups.regions[0].revenueChange))} lower sales than the prior period.` : "Regional sales are stable or improving."}</small></p></li>
+            <li><span>2</span><p><strong>{underperformers[0] ? `Investigate ${underperformers[0].product}` : "No loss-making product to investigate"}</strong><small>{underperformers[0] ? `${money(underperformers[0].profit)} profit at a ${underperformers[0].profitMargin.toFixed(1)}% margin.` : "All visible products are profitable."}</small></p></li>
+            <li><span>3</span><p><strong>Review loss-making discount levels</strong><small>{countLabel(discountImpact.filter((row) => row.totalProfit < 0).length, "discount level")} produced negative profit.</small></p></li>
+          </ol>
         </section>
 
         <section className="analysis-panel" aria-labelledby="discount-impact-title">
@@ -254,15 +204,15 @@ export default function ReportDashboard({ records, startDate, endDate, generated
 
       </div>
 
-      <aside className="management-narrative"><span>“</span><p>{generateSummary(report, filters.startDate, filters.endDate)} {priorRecords.length ? `Sales were ${changeLabel(changes.revenue).toLowerCase()}, while profit was ${changeLabel(changes.profit).toLowerCase()}.` : "No comparable prior-period rows were available in the uploaded source."}</p></aside>
+      <div className="report-overview-single">
+        <section className="analysis-panel revenue-pulse" aria-labelledby="revenue-pulse-title"><div className="card-heading"><h4 id="revenue-pulse-title">Daily revenue</h4><span>Best · {shortDate(report.bestDay?.date)} · {money(report.bestDay?.revenue ?? 0)}</span></div><DailyRevenueChart days={report.daily} /></section>
+      </div>
 
       <section className="breakdown-card expanded-breakdown">
         <div className="breakdown-head"><div><h4>Detail</h4><small>Review performance or trace an individual order.</small></div><div className="tabs" role="tablist" aria-label="Report breakdown">{Object.entries(views).map(([key, item]) => <button type="button" role="tab" aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)} key={key}>{item.label}</button>)}</div></div>
         {view === "orders" && <div className="order-search no-print"><label htmlFor="order-search">Find an order</label><input id="order-search" type="search" value={orderQuery} onChange={(event) => setOrderQuery(event.target.value)} placeholder="Search order ID, customer, product, or region" /><span>{countLabel(visibleOrders.length, "matching order")}</span></div>}
         <DataTable rows={views[view].rows} columns={views[view].columns} label={views[view].label} />
       </section>
-
-      <section className="source-boundary"><strong>Built for Marcus’s reporting role</strong><p>The dashboard covers order tracking, weekly and monthly performance, regions, categories, segments, products, discounts, and profit. Cross-department issue ownership and resolution require operational issue fields that are not present in this sales export.</p></section>
 
       <section className="report-actions no-print"><div><button className="button ghost" onClick={onRestart}>New report</button></div><div><button className="button secondary" type="button" onClick={downloadFilteredCsv}>Download filtered CSV</button><button className="button primary" type="button" onClick={() => window.print()}>Print / Save PDF</button></div></section>
     </section>

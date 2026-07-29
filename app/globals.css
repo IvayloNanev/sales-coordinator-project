@@ -3168,6 +3168,14 @@ input:focus-visible,
 .attention-groups li small { color: var(--muted); font-size: 10px; }
 .attention-groups li b { flex: 0 0 auto; align-self: center; font-size: 10px; }
 .attention-groups p { margin: 0; color: var(--muted); font-size: 11px; }
+.weekly-priorities ol { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.weekly-priorities li { display: grid; grid-template-columns: 28px 1fr; align-items: start; gap: 10px; padding: 13px; border: 1px solid var(--line); border-top: 3px solid var(--gold); background: #fffdf8; }
+.weekly-priorities li > span { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 50%; color: white; background: var(--navy); font-size: 10px; font-weight: 850; }
+.weekly-priorities li p { margin: 0; }
+.weekly-priorities li strong, .weekly-priorities li small { display: block; }
+.weekly-priorities li strong { font-size: 12px; line-height: 1.35; }
+.weekly-priorities li small { margin-top: 4px; color: var(--muted); font-size: 10px; line-height: 1.45; }
+.manager-summary { margin-top: 18px; }
 .order-search {
   display: grid;
   grid-template-columns: auto minmax(220px, 1fr) auto;
@@ -3204,6 +3212,7 @@ input:focus-visible,
   .comparison-strip > div,
   .driver-groups,
   .attention-groups { grid-template-columns: 1fr; }
+  .weekly-priorities ol { grid-template-columns: 1fr; }
   .report-filter-panel .period-presets { align-items: stretch; flex-direction: column; }
   .period-presets > span { margin-bottom: 2px; }
   .order-search { grid-template-columns: 1fr; }
