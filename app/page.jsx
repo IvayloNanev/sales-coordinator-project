@@ -20,6 +20,7 @@ export default function Home() {
   const [totalRecords, setTotalRecords] = useState(0);
   const [generatedDate, setGeneratedDate] = useState("");
   const [isValidating, setIsValidating] = useState(false);
+  const [isReportRevealing, setIsReportRevealing] = useState(false);
   const [intakeAnalysis, setIntakeAnalysis] = useState({ files: [], coverage: [] });
   const report = useMemo(() => calculateReport(validation?.validRecords ?? []), [validation]);
   const resultsReady = Boolean(validation?.validRecords.length && setup.startDate && setup.endDate);
@@ -117,7 +118,11 @@ export default function Home() {
     setPage(destination);
   };
 
-  const produceResults = () => navigate("results");
+  const produceResults = () => {
+    setIsReportRevealing(true);
+    navigate("results");
+    window.setTimeout(() => setIsReportRevealing(false), 720);
+  };
 
   const restart = () => {
     setSetup(initialState);
@@ -125,6 +130,7 @@ export default function Home() {
     setTotalRecords(0);
     setGeneratedDate("");
     setIsValidating(false);
+    setIsReportRevealing(false);
     setIntakeAnalysis({ files: [], coverage: [] });
     setPage("upload");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -146,6 +152,7 @@ export default function Home() {
       </main>
       <footer className="site-footer no-print"><strong>Salescraft</strong><span>Local processing · No uploads</span></footer>
       {isValidating && <div className="loading-overlay" role="status"><span />Reading dates and checking every row…</div>}
+      {isReportRevealing && <div className="report-page-cover" role="status"><span>Sales report ready</span></div>}
     </div>
   );
 }
