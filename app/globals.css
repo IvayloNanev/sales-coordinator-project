@@ -163,8 +163,8 @@ td:last-child, th:last-child { text-align: right; }
 .report-table .table-wrap { border: 1px solid var(--line); border-radius: 10px; }
 .report-table td:nth-last-child(-n+3), .report-table th:nth-last-child(-n+3) { text-align: right; }
 .report-actions { display: flex; justify-content: space-between; align-items: center; gap: 25px; margin-top: 36px; padding: 22px; }.report-actions > div:first-child { display: flex; flex-direction: column; gap: 4px; }.report-actions small { color: var(--muted); }.report-actions > div:last-child { display: flex; gap: 10px; }
-.loading-overlay { position: fixed; inset: 0; z-index: 50; display: grid; place-content: center; justify-items: center; gap: 14px; color: white; background: rgba(9, 31, 24, .72); font-weight: 750; }
-.loading-overlay span { width: 34px; height: 34px; border: 3px solid rgba(255,255,255,.25); border-top-color: white; border-radius: 50%; animation: spin .7s linear infinite; }
+.loading-overlay { position: fixed; right: 24px; bottom: 24px; z-index: 50; display: flex; align-items: center; gap: 11px; padding: 13px 16px; border: 1px solid rgba(255,255,255,.16); border-radius: 12px; color: white; background: rgba(9, 31, 24, .92); box-shadow: 0 14px 38px rgba(9,31,24,.22); font-size: 11px; font-weight: 750; animation: notice-in .25s ease both; }
+.loading-overlay span { width: 20px; height: 20px; flex: 0 0 auto; border: 2px solid rgba(255,255,255,.25); border-top-color: white; border-radius: 50%; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes page-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes rise-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }

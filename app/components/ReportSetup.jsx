@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useChartReveal from "../hooks/useChartReveal";
 
 const formatPeriod = (startDate, endDate) => {
@@ -62,6 +62,8 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   const [kaggleError, setKaggleError] = useState("");
   const [isSourceEditing, setIsSourceEditing] = useState(false);
   const reviewVisible = Boolean(validation && !isValidating);
+  const validationReportRef = useRef(null);
+  const previousReviewVisible = useRef(false);
   const snapshotRevealRef = useChartReveal(reviewVisible);
   const filesReady = files.length > 0;
   const periodReady = Boolean(startDate && endDate && startDate <= endDate);
@@ -84,6 +86,39 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
     ["Categories", unknownCategories, unknownCategories ? `${countLabel(unknownCategories, "row")} uses an unknown category` : "Only Furniture, Office Supplies, and Technology are present"],
     ["Duplicate line items", validation?.duplicateRecords ?? 0, validation?.duplicateRecords ? `${countLabel(validation.duplicateRecords, "duplicate")} excluded from reporting` : "No repeated line-item identifiers were found"],
   ];
+
+  useEffect(() => {
+    const justOpened = reviewVisible && !previousReviewVisible.current;
+    previousReviewVisible.current = reviewVisible;
+    if (!justOpened || !validationReportRef.current) return undefined;
+
+    const timer = window.setTimeout(() => {
+      const target = validationReportRef.current;
+      if (!target) return;
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const destination = window.scrollY + target.getBoundingClientRect().top - 84;
+      if (reduceMotion) {
+        window.scrollTo({ top: destination, behavior: "auto" });
+        return;
+      }
+
+      const start = window.scrollY;
+      const distance = destination - start;
+      const duration = 1350;
+      const startedAt = window.performance.now();
+      const guideToReport = (now) => {
+        const progress = Math.min((now - startedAt) / duration, 1);
+        const eased = progress < 0.5
+          ? 4 * progress * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        window.scrollTo(0, start + distance * eased);
+        if (progress < 1) window.requestAnimationFrame(guideToReport);
+      };
+      window.requestAnimationFrame(guideToReport);
+    }, 320);
+
+    return () => window.clearTimeout(timer);
+  }, [reviewVisible]);
 
   const downloadValidationResults = () => {
     const rows = [
@@ -177,7 +212,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
         {reviewVisible && !isSourceEditing && <div className="validation-source-overlay no-print"><span>Source validation complete</span></div>}
       </section>
 
-      {reviewVisible && <aside className="intake-status incoming-audit" aria-label="Automatic incoming data review">
+      {reviewVisible && <aside ref={validationReportRef} className="intake-status incoming-audit" aria-label="Automatic incoming data review">
           <section className={`data-review-card panel${flaggedRows ? " has-errors" : " all-clear"}`} aria-labelledby="data-review-title">
             <header className="data-review-head">
               <div><p className="section-number">01 / Data validation</p><h2 id="data-review-title">{flaggedRows ? "Order-data exceptions found" : "Superstore order data is ready"}</h2><p>{flaggedRows ? "Rows with missing or invalid order values stay out of the report." : "The historical order records passed validation and are ready for weekly or monthly analysis."}</p></div>
