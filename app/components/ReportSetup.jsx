@@ -211,6 +211,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
               <div className="dataset-counts" aria-label="Dataset dimensions"><p><strong>{totalRecords.toLocaleString()}</strong><span>Data rows</span></p><p><strong>{columnCount}</strong><span>Named columns</span></p><p><strong>{report.uniqueOrders.toLocaleString()}</strong><span>Distinct orders</span></p></div>
               <div className="column-dictionary">
                 <div className="incoming-section-head"><h4>Column guide</h4><small>{primaryFile.columnNames.length} names found</small></div>
+                <ol className="column-name-grid" aria-label="All uploaded column names">{primaryFile.columnNames.map((column, index) => <li key={`${column}-name-${index}`}><span>{index + 1}</span><strong>{column}</strong></li>)}</ol>
                 <div className="table-wrap"><table><thead><tr><th>#</th><th>Column name</th><th>What it contains</th><th>Example from file</th></tr></thead><tbody>{primaryFile.columnNames.map((column, index) => <tr key={`${column}-${index}`}><td>{index + 1}</td><td><strong>{column}</strong></td><td>{COLUMN_DETAILS[column] ?? "Additional source value"}</td><td>{primaryFile.previewRows[0]?.[index] || "—"}</td></tr>)}</tbody></table></div>
               </div>
               <details className="row-preview">
