@@ -193,6 +193,11 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
               <span className={`review-badge ${flaggedRows ? "warning" : "success"}`}>{flaggedRows ? `${flaggedRows} flagged` : "Passed"}</span>
             </header>
 
+            <section className="source-file-summary" aria-labelledby="source-file-summary-title">
+              <div className="incoming-section-head"><h3 id="source-file-summary-title">{intakeAnalysis.files.length === 1 ? "Source file" : "Source files"}</h3><small>{countLabel(intakeAnalysis.files.length, "file")}</small></div>
+              <ul>{intakeAnalysis.files.map((item, index) => <li key={`${item.name}-summary-${index}`}><span className="source-file-type">{item.type}</span><div><strong>{item.name}</strong><small>{Math.max(1, Math.round(item.size / 1024)).toLocaleString()} KB · {item.startDate ? `${formatPeriod(item.startDate, item.endDate)} coverage` : "No readable date coverage"}</small></div><span className={`source-status ${item.issues ? "flag" : "pass"}`}>{item.issues ? countLabel(item.issues, "issue") : "Ready"}</span></li>)}</ul>
+            </section>
+
             <dl className="data-facts incoming-facts">
               <div><dt>Files</dt><dd>{files.length}</dd></div>
               <div><dt>Rows received</dt><dd>{totalRecords}</dd></div>
@@ -226,12 +231,6 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
             </section>
 
             <div className="incoming-audit-grid">
-              <section className="source-ledger" aria-labelledby="source-ledger-title">
-                <div className="incoming-section-head"><h3 id="source-ledger-title">Sources</h3><small>{countLabel(intakeAnalysis.files.length, "file")}</small></div>
-                <p className="audit-explainer">Each row summarizes one uploaded order file. Rows read is everything extracted from the file; report-ready rows passed the required date, order, customer, product, region, quantity, and sales checks.</p>
-                <div className="table-wrap"><table><thead><tr><th>Source file</th><th>Rows read</th><th>Report-ready</th><th>Unique orders</th><th>Total sales</th><th>Validation</th></tr></thead><tbody>{intakeAnalysis.files.map((item, index) => <tr key={`${item.name}-${index}`}><td><span className="source-name"><b>{item.type}</b><span><strong>{item.name}</strong><small>{Math.max(1, Math.round(item.size / 1024))} KB · {item.startDate ? `${item.startDate}—${item.endDate}` : "No date range"}</small></span></span></td><td>{item.extractedRows}</td><td>{item.validRows}</td><td>{item.orders}</td><td>{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(item.revenue)}</td><td><span className={`source-status ${item.issues ? "flag" : "pass"}`}>{item.issues ? countLabel(item.issues, "issue") : "Ready"}</span></td></tr>)}</tbody></table></div>
-              </section>
-
               <section className="schema-audit chart-reveal" ref={coverageRevealRef} aria-labelledby="schema-audit-title">
                 <div className="incoming-section-head"><h3 id="schema-audit-title">Field coverage</h3><small>{intakeAnalysis.coverage.filter((field) => field.present === field.total && field.total).length}/{intakeAnalysis.coverage.length} complete</small></div>
                 <p className="audit-explainer">Coverage shows how many report-ready rows contain each field Marcus needs for order tracking, performance comparisons, and discount-profit analysis.</p>
