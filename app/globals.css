@@ -3404,3 +3404,114 @@ input:focus-visible,
   .page-view.results-page { position: static; width: 100%; overflow: visible; }
   .page-view.results-page .expanded-report { width: 100%; margin: 0; }
 }
+
+/* Report finish: one rounded, gold-only control and card system. */
+.expanded-report,
+.expanded-report .report-filter-panel,
+.expanded-report .briefing-grid .analysis-panel,
+.expanded-report .metric-grid-expanded .metric-card,
+.expanded-report .breakdown-card,
+.expanded-report .breakdown-card .table-wrap,
+.expanded-report .order-search,
+.expanded-report .order-search input,
+.expanded-report .tabs,
+.expanded-report .tabs button,
+.expanded-report .report-actions .button {
+  border-color: rgba(177, 138, 67, .48);
+}
+.expanded-report { border-radius: 26px; }
+.expanded-report .report-filter-panel { border-radius: 20px; }
+.expanded-report .briefing-grid .analysis-panel {
+  border: 1px solid rgba(177, 138, 67, .34);
+  border-radius: 18px;
+  background:
+    radial-gradient(ellipse at 88% 4%, rgba(200, 160, 79, .13), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, .72), rgba(245, 232, 201, .42));
+}
+.expanded-report .metric-grid-expanded .metric-card,
+.expanded-report .metric-grid-expanded .metric-card:nth-child(2),
+.expanded-report .metric-grid-expanded .metric-card:nth-child(3),
+.expanded-report .metric-grid-expanded .metric-card:nth-child(4),
+.expanded-report .metric-grid-expanded .metric-card:nth-child(5),
+.expanded-report .metric-grid-expanded .metric-card:nth-child(6),
+.expanded-report .metric-grid-expanded .metric-card.featured {
+  border: 1px solid rgba(177, 138, 67, .38);
+  border-radius: 18px;
+  background:
+    radial-gradient(ellipse at 88% 4%, rgba(200, 160, 79, .16), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, .68), rgba(239, 221, 180, .36));
+}
+.expanded-report .breakdown-card {
+  border: 1px solid rgba(177, 138, 67, .38);
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, .68), rgba(246, 235, 209, .34));
+}
+.expanded-report .breakdown-card .table-wrap {
+  overflow: auto;
+  border-radius: 14px;
+}
+.expanded-report .compact-analysis-table {
+  border-radius: 12px;
+  scrollbar-color: rgba(177, 138, 67, .55) rgba(246, 235, 209, .46);
+}
+.expanded-report .compact-analysis-table th {
+  background: #fffaf0;
+}
+.expanded-report .tabs {
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(239, 221, 180, .48);
+}
+.expanded-report .tabs button {
+  border-radius: 999px;
+}
+.expanded-report .tabs button.active {
+  color: #fffaf0;
+  background: linear-gradient(145deg, #76551e, #a27a31);
+  box-shadow: inset 0 0 0 1px rgba(255, 244, 202, .42);
+}
+.expanded-report .order-search {
+  border-radius: 16px;
+  background: linear-gradient(145deg, #fffaf0, #f5e9cc);
+}
+.expanded-report .order-search input {
+  border: 1px solid rgba(177, 138, 67, .48);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, .88);
+}
+.expanded-report .report-actions .button {
+  border-radius: 999px;
+}
+.expanded-report .report-actions .button.secondary,
+.expanded-report .report-actions .button.ghost {
+  color: var(--gold-dark);
+  background: rgba(255, 250, 240, .88);
+}
+
+/* The date popup should read as a compact control, not another report card. */
+.gold-date-popover {
+  width: 238px;
+  padding: 10px;
+  border-radius: 13px;
+}
+.gold-date-popover header {
+  grid-template-columns: 27px 1fr 27px;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+.gold-date-popover header strong { font-size: 13px; }
+.report-filter-panel .gold-date-popover header button,
+.report-filter-panel .gold-calendar-days button {
+  min-height: 27px;
+}
+.report-filter-panel .gold-date-popover header button { font-size: 17px; }
+.gold-calendar-weekdays,
+.gold-calendar-days { gap: 2px; }
+.gold-calendar-weekdays { margin-bottom: 2px; }
+.gold-calendar-weekdays span { font-size: 8px; }
+.report-filter-panel .gold-calendar-days button { font-size: 10px; }
+
+@media (max-width: 900px) {
+  .report-filter-panel > button { grid-column: 1 / -1; }
+  .report-filter-panel .gold-date-popover button { grid-column: auto; }
+}
