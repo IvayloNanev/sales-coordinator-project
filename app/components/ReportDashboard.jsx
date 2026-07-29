@@ -83,25 +83,25 @@ export default function ReportDashboard({ records, startDate, endDate, generated
   const changes = useMemo(() => performanceChange(report, priorReport), [report, priorReport]);
   const categoryDrivers = useMemo(() => comparisonDrivers(currentRecords, priorRecords, "productCategory"), [currentRecords, priorRecords]);
   const regionDrivers = useMemo(() => comparisonDrivers(currentRecords, priorRecords, "salesRegion"), [currentRecords, priorRecords]);
-  const productDrivers = useMemo(() => comparisonDrivers(currentRecords, priorRecords, "product"), [currentRecords, priorRecords]);
-  const discountImpact = useMemo(() => manager.discountImpact(currentRecords), [manager, currentRecords]);
-  const underperformers = useMemo(
-    () => report.products.filter((product) => product.profit < 0).sort((a, b) => a.profit - b.profit).slice(0, 8),
+  const categoryChanges = useMemo(
+    () => new Map(categoryDrivers.map((driver) => [driver.label, driver.revenueChange])),
+    [categoryDrivers],
+  );
+  const regionChanges = useMemo(
+    () => new Map(regionDrivers.map((driver) => [driver.label, driver.revenueChange])),
+    [regionDrivers],
+  );
+  const highestDiscountProducts = useMemo(
+    () => report.products
+      .filter((product) => product.averageDiscount > 0)
+      .sort((a, b) => b.averageDiscount - a.averageDiscount || a.profit - b.profit)
+      .slice(0, 5),
     [report.products],
   );
-  const attentionGroups = useMemo(() => {
-    const flagged = (groups, drivers, key) => {
-      const changesByName = new Map(drivers.map((driver) => [driver.label, driver]));
-      return groups
-        .map((group) => ({ ...group, revenueChange: changesByName.get(group[key])?.revenueChange ?? 0 }))
-        .filter((group) => group.profit < 0 || group.revenueChange < 0)
-        .sort((a, b) => a.revenueChange - b.revenueChange || a.profit - b.profit);
-    };
-    return {
-      regions: flagged(report.regions, regionDrivers, "salesRegion"),
-      categories: flagged(report.categories, categoryDrivers, "productCategory"),
-    };
-  }, [report.regions, report.categories, regionDrivers, categoryDrivers]);
+  const weakestRegion = useMemo(
+    () => regionDrivers.filter((driver) => driver.revenueChange < 0).sort((a, b) => a.revenueChange - b.revenueChange)[0],
+    [regionDrivers],
+  );
   const visibleOrders = useMemo(() => {
     const query = orderQuery.trim().toLowerCase();
     if (!query) return report.orders;
@@ -163,7 +163,7 @@ export default function ReportDashboard({ records, startDate, endDate, generated
         </div>
       </section>
 
-      <aside className="management-narrative manager-summary"><span>“</span><div><p className="eyebrow">Manager summary</p><p>{priorRecords.length ? `Sales were ${changeLabel(changes.revenue).toLowerCase()} and profit was ${changeLabel(changes.profit).toLowerCase()}. ${categoryDrivers[0] ? `${categoryDrivers[0].label} had the largest category movement at ${categoryDrivers[0].revenueChange > 0 ? "+" : ""}${money(categoryDrivers[0].revenueChange)}.` : ""} ${attentionGroups.regions[0] ? `${attentionGroups.regions[0].salesRegion} needs regional follow-up after a ${money(Math.abs(attentionGroups.regions[0].revenueChange))} sales decline.` : "No region requires decline follow-up."}` : "No comparable prior-period rows were available in the uploaded source."}</p></div></aside>
+      <aside className="management-narrative manager-summary"><span>“</span><div><p className="eyebrow">Manager summary</p><p>{priorRecords.length ? `Sales were ${changeLabel(changes.revenue).toLowerCase()} and profit was ${changeLabel(changes.profit).toLowerCase()}. ${categoryDrivers[0] ? `${categoryDrivers[0].label} had the largest category movement at ${categoryDrivers[0].revenueChange > 0 ? "+" : ""}${money(categoryDrivers[0].revenueChange)}.` : ""} ${weakestRegion ? `${weakestRegion.label} needs regional follow-up after a ${money(Math.abs(weakestRegion.revenueChange))} sales decline.` : "No region requires decline follow-up."}` : "No comparable prior-period rows were available in the uploaded source."}</p></div></aside>
 
       <div className="metric-grid metric-grid-expanded">
         <MetricCard featured label="Sales" value={money(report.totalRevenue)} note={changeLabel(changes.revenue)} trend={changes.revenue} />
@@ -174,35 +174,32 @@ export default function ReportDashboard({ records, startDate, endDate, generated
         <MetricCard label="Average order" value={money(report.averageOrderValue)} note={`Median ${money(report.medianOrderValue)}`} />
       </div>
 
-      <div className="coordinator-analysis-grid">
-        <section className="analysis-panel change-drivers" aria-labelledby="change-drivers-title">
-          <div className="card-heading"><h4 id="change-drivers-title">What changed?</h4><span>Largest sales movements</span></div>
-          <div className="driver-groups">
-            <div><h5>Categories</h5><ul>{categoryDrivers.map((driver) => <li key={driver.label}><span>{driver.label}</span><strong className={changeClass(driver.revenueChange)}>{driver.revenueChange > 0 ? "+" : ""}{money(driver.revenueChange)}</strong></li>)}</ul></div>
-            <div><h5>Products</h5><ul>{productDrivers.map((driver) => <li key={driver.label}><span>{driver.label}</span><strong className={changeClass(driver.revenueChange)}>{driver.revenueChange > 0 ? "+" : ""}{money(driver.revenueChange)}</strong></li>)}</ul></div>
-          </div>
-        </section>
+      <section className="monday-briefing" aria-labelledby="monday-briefing-title">
+        <div className="briefing-heading"><div><p className="eyebrow">Marcus’s Monday priorities</p><h4 id="monday-briefing-title">Monday briefing</h4></div><span>Sales totals, period movement, and margin risk</span></div>
+        <div className="briefing-grid">
+          <section className="analysis-panel" aria-labelledby="category-briefing-title">
+            <div className="card-heading"><h5 id="category-briefing-title">Sales by category</h5><span>vs prior period</span></div>
+            <div className="compact-analysis-table"><table><thead><tr><th>Category</th><th>Sales</th><th>Change</th></tr></thead><tbody>{report.categories.map((category) => {
+              const change = categoryChanges.get(category.productCategory) ?? 0;
+              return <tr key={category.productCategory}><td>{category.productCategory}</td><td>{money(category.revenue)}</td><td className={changeClass(change)}>{change > 0 ? "+" : ""}{money(change)}</td></tr>;
+            })}</tbody></table></div>
+          </section>
 
-        <section className="analysis-panel attention-panel weekly-priorities" aria-labelledby="attention-title">
-          <div className="card-heading"><h4 id="attention-title">This week’s priorities</h4><span>Recommended manager follow-up</span></div>
-          <ol>
-            <li><span>1</span><p><strong>{attentionGroups.regions[0] ? `Review ${attentionGroups.regions[0].salesRegion} performance` : "No regional decline to escalate"}</strong><small>{attentionGroups.regions[0] ? `${money(Math.abs(attentionGroups.regions[0].revenueChange))} lower sales than the prior period.` : "Regional sales are stable or improving."}</small></p></li>
-            <li><span>2</span><p><strong>{underperformers[0] ? `Investigate ${underperformers[0].product}` : "No loss-making product to investigate"}</strong><small>{underperformers[0] ? `${money(underperformers[0].profit)} profit at a ${underperformers[0].profitMargin.toFixed(1)}% margin.` : "All visible products are profitable."}</small></p></li>
-            <li><span>3</span><p><strong>Review loss-making discount levels</strong><small>{countLabel(discountImpact.filter((row) => row.totalProfit < 0).length, "discount level")} produced negative profit.</small></p></li>
-          </ol>
-        </section>
+          <section className="analysis-panel" aria-labelledby="region-briefing-title">
+            <div className="card-heading"><h5 id="region-briefing-title">Regions up or down</h5><span>vs prior period</span></div>
+            <div className="compact-analysis-table"><table><thead><tr><th>Region</th><th>Sales</th><th>Change</th></tr></thead><tbody>{report.regions.map((region) => {
+              const change = regionChanges.get(region.salesRegion) ?? 0;
+              return <tr className={change < 0 ? "risk-row" : ""} key={region.salesRegion}><td>{region.salesRegion}</td><td>{money(region.revenue)}</td><td className={changeClass(change)}>{change > 0 ? "+" : ""}{money(change)}</td></tr>;
+            })}</tbody></table></div>
+          </section>
 
-        <section className="analysis-panel" aria-labelledby="discount-impact-title">
-          <div className="card-heading"><h4 id="discount-impact-title">Discount impact</h4><span>Profit by discount level</span></div>
-          <div className="compact-analysis-table"><table><thead><tr><th>Discount</th><th>Sales</th><th>Profit</th><th>Avg. profit</th></tr></thead><tbody>{discountImpact.map((row) => <tr className={row.totalProfit < 0 ? "risk-row" : ""} key={row.discount}><td>{Math.round(row.discount * 100)}%</td><td>{money(row.totalSales)}</td><td>{money(row.totalProfit)}</td><td>{money(row.averageProfit)}</td></tr>)}</tbody></table></div>
-        </section>
-
-        <section className="analysis-panel" aria-labelledby="underperformers-title">
-          <div className="card-heading"><h4 id="underperformers-title">Underperformers</h4><span>{report.products.filter((product) => product.profit < 0).length} products below $0 profit</span></div>
-          <div className="compact-analysis-table"><table><thead><tr><th>Product</th><th>Sales</th><th>Profit</th><th>Margin</th></tr></thead><tbody>{underperformers.map((product) => <tr key={product.product}><td>{product.product}</td><td>{money(product.revenue)}</td><td className="negative">{money(product.profit)}</td><td>{product.profitMargin.toFixed(1)}%</td></tr>)}</tbody></table></div>
-        </section>
-
-      </div>
+          <section className="analysis-panel discount-risk-panel" aria-labelledby="discount-risk-title">
+            <div className="card-heading"><h5 id="discount-risk-title">Highest-discount products</h5><span>Margin effect</span></div>
+            <div className="compact-analysis-table"><table><thead><tr><th>Product</th><th>Avg. discount</th><th>Profit</th><th>Margin</th></tr></thead><tbody>{highestDiscountProducts.map((product) => <tr className={product.profit < 0 ? "risk-row" : ""} key={product.product}><td>{product.product}</td><td>{(product.averageDiscount * 100).toFixed(1)}%</td><td className={changeClass(product.profit)}>{money(product.profit)}</td><td className={changeClass(product.profitMargin)}>{product.profitMargin.toFixed(1)}%</td></tr>)}</tbody></table></div>
+            {!highestDiscountProducts.length && <p className="briefing-empty">No discounted products appear in this period.</p>}
+          </section>
+        </div>
+      </section>
 
       <div className="report-overview-single">
         <section className="analysis-panel revenue-pulse" aria-labelledby="revenue-pulse-title"><div className="card-heading"><h4 id="revenue-pulse-title">Daily revenue</h4><span>Best · {shortDate(report.bestDay?.date)} · {money(report.bestDay?.revenue ?? 0)}</span></div><DailyRevenueChart days={report.daily} /></section>

@@ -3203,6 +3203,44 @@ input:focus-visible,
 .compact-analysis-table td:first-child { text-align: left; }
 .compact-analysis-table th { position: sticky; top: 0; color: var(--muted); background: white; z-index: 1; }
 .compact-analysis-table .risk-row { background: #fff7f5; }
+.monday-briefing { margin-top: 22px; }
+.briefing-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 0 2px 12px;
+  border-bottom: 1px solid var(--ink);
+}
+.briefing-heading p { margin: 0 0 4px; }
+.briefing-heading h4 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(25px, 3vw, 36px);
+  line-height: 1;
+}
+.briefing-heading > span { color: var(--muted); font-size: 11px; text-align: right; }
+.briefing-grid {
+  display: grid;
+  grid-template-columns: minmax(0, .8fr) minmax(0, .9fr) minmax(0, 1.45fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+.briefing-grid .analysis-panel { min-width: 0; }
+.briefing-grid .card-heading h5 {
+  margin: 0;
+  font-size: 13px;
+}
+.briefing-grid .compact-analysis-table { max-height: 270px; }
+.briefing-grid .compact-analysis-table table { font-size: 11px; }
+.discount-risk-panel .compact-analysis-table th:first-child,
+.discount-risk-panel .compact-analysis-table td:first-child {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.briefing-empty { margin: 12px 0 0; color: var(--muted); font-size: 11px; }
 
 @media (max-width: 900px) {
   .report-filter-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -3210,6 +3248,7 @@ input:focus-visible,
   .coordinator-analysis-grid { grid-template-columns: 1fr; }
   .coordinator-analysis-grid .change-drivers { grid-column: auto; }
   .coordinator-analysis-grid .attention-panel { grid-column: auto; }
+  .briefing-grid { grid-template-columns: 1fr; }
   .metric-grid-expanded { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
@@ -3219,6 +3258,8 @@ input:focus-visible,
   .driver-groups,
   .attention-groups { grid-template-columns: 1fr; }
   .weekly-priorities ol { grid-template-columns: 1fr; }
+  .briefing-heading { align-items: start; flex-direction: column; }
+  .briefing-heading > span { text-align: left; }
   .report-filter-panel .period-presets { align-items: stretch; flex-direction: column; }
   .period-presets > span { margin-bottom: 2px; }
   .order-search { grid-template-columns: 1fr; }
