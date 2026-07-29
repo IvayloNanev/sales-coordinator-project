@@ -68,19 +68,23 @@ test("accepts SalesScope workbook-style headers without store columns", () => {
     "Order_ID,Order_Date,Region,Sales_Rep,Customer_ID,Customer_Name,Customer_Segment,Product_Category,Product,Units_Sold,Unit_Price,Discount_Pct,Revenue,Profit",
     "SO-10001,2026-06-13,Northeast,Marcus Lee,CUST-859,Ion Partners,Small Business,Office Supplies,Desk Organizer,2,32,10%,57.60,29.60",
     "SO-10002,2026-06-04,Northeast,Elena Ruiz,CUST-303,Willow Consulting,Mid-Market,Software,Team Collaboration License,10,360,0%,-3600,-2700",
+    "SO-10065,2026-06-17,,Jordan Brooks,CUST-580,Ion Systems,Enterprise,Software,CRM Annual License,25,720,12%,15840,11340",
+    "SO-10119,2026-05-11,Southeast,Jordan Brooks,CUST-305,,Enterprise,Office Supplies,Ergonomic Keyboard,16,89.99,20%,1151.87,383.87",
   ].join("\n");
   const parsed = parseCsvText(csv, "SalesScope.csv");
   const result = validateRecords(parsed.records, parsed.fileErrors);
   const report = calculateReport(result.validRecords);
 
   assert.deepEqual(parsed.fileErrors, []);
-  assert.equal(result.validRecords.length, 2);
+  assert.equal(result.validRecords.length, 4);
   assert.equal(result.validRecords[0].customerName, "Ion Partners");
-  assert.equal(report.orders[0].customerId, "CUST-859");
+  assert.equal(report.orders.find((order) => order.orderNumber === "SO-10001").customerId, "CUST-859");
   assert.equal(result.validRecords[0].segment, "Small Business");
-  assert.equal(report.orders[0].customerName, "Ion Partners");
+  assert.equal(report.orders.find((order) => order.orderNumber === "SO-10001").customerName, "Ion Partners");
   assert.equal(new SalesDataManager(result.validRecords).records[0].discount, 0.1);
-  assert.equal(report.totalRevenue, -3542.4);
+  assert.equal(result.validRecords[2].salesRegion, "Unassigned");
+  assert.equal(result.validRecords[3].customerName, "CUST-305");
+  assert.equal(Number(report.totalRevenue.toFixed(2)), 13449.47);
 });
 
 test("uses city and state as a stable store fallback when postal code is blank", () => {
