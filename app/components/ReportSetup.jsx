@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useChartReveal from "../hooks/useChartReveal";
 
 const formatPeriod = (startDate, endDate) => {
@@ -61,10 +61,10 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   const [isLoadingKaggle, setIsLoadingKaggle] = useState(false);
   const [kaggleError, setKaggleError] = useState("");
   const [isSourceEditing, setIsSourceEditing] = useState(false);
-  const [isReviewTransitioning, setIsReviewTransitioning] = useState(false);
-  const [reviewPageActive, setReviewPageActive] = useState(false);
   const reviewVisible = Boolean(validation && !isValidating);
-  const snapshotRevealRef = useChartReveal(reviewPageActive);
+  const validationReportRef = useRef(null);
+  const previousReviewVisible = useRef(false);
+  const snapshotRevealRef = useChartReveal(reviewVisible);
   const filesReady = files.length > 0;
   const periodReady = Boolean(startDate && endDate && startDate <= endDate);
   const validationReady = Boolean(validation && validation.validRecords.length);
@@ -88,24 +88,51 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   ];
 
   useEffect(() => {
-    if (!reviewVisible || isSourceEditing) return undefined;
-    const blurTimer = window.setTimeout(() => setIsReviewTransitioning(true), 0);
-    const pageTimer = window.setTimeout(() => {
-      setReviewPageActive(true);
-      setIsReviewTransitioning(false);
-      window.scrollTo({ top: 0, behavior: "auto" });
-    }, 480);
-    return () => {
-      window.clearTimeout(blurTimer);
-      window.clearTimeout(pageTimer);
-    };
-  }, [reviewVisible, isSourceEditing]);
+    const justOpened = reviewVisible && !previousReviewVisible.current;
+    previousReviewVisible.current = reviewVisible;
+    if (!justOpened || !validationReportRef.current) return undefined;
 
-  const editSource = () => {
-    setReviewPageActive(false);
-    setIsSourceEditing(true);
-    window.scrollTo({ top: 0, behavior: "auto" });
-  };
+    let animationFrame;
+    let previousScrollBehavior;
+    const timer = window.setTimeout(() => {
+      const target = validationReportRef.current;
+      if (!target) return;
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const destination = window.scrollY + target.getBoundingClientRect().top - 84;
+      if (reduceMotion) {
+        window.scrollTo({ top: destination, behavior: "auto" });
+        return;
+      }
+
+      const start = window.scrollY;
+      const distance = destination - start;
+      const duration = 720;
+      const startedAt = window.performance.now();
+      previousScrollBehavior = document.documentElement.style.scrollBehavior;
+      document.documentElement.style.scrollBehavior = "auto";
+      const guideToReport = (now) => {
+        const progress = Math.min((now - startedAt) / duration, 1);
+        const eased = progress < 0.5
+          ? 4 * progress * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        window.scrollTo(0, start + distance * eased);
+        if (progress < 1) {
+          animationFrame = window.requestAnimationFrame(guideToReport);
+        } else {
+          document.documentElement.style.scrollBehavior = previousScrollBehavior;
+        }
+      };
+      animationFrame = window.requestAnimationFrame(guideToReport);
+    }, 180);
+
+    return () => {
+      window.clearTimeout(timer);
+      if (animationFrame) window.cancelAnimationFrame(animationFrame);
+      if (previousScrollBehavior !== undefined) {
+        document.documentElement.style.scrollBehavior = previousScrollBehavior;
+      }
+    };
+  }, [reviewVisible]);
 
   const downloadValidationResults = () => {
     const rows = [
@@ -118,8 +145,6 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   };
 
   const addSelectedFiles = async (incoming) => {
-    setReviewPageActive(false);
-    setIsReviewTransitioning(false);
     await onFiles(incoming);
     setIsSourceEditing(false);
   };
@@ -151,14 +176,14 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
 
   return (
     <div
-      className={`intake-layout${reviewPageActive || isReviewTransitioning ? " has-review" : ""}${isDragging ? " page-dragging" : ""}`}
+      className={`intake-layout${reviewVisible ? " has-review" : ""}${isDragging ? " page-dragging" : ""}`}
       onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }}
       onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; setIsDragging(true); }}
       onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setIsDragging(false); }}
       onDrop={handleDrop}
     >
-      {(!reviewPageActive || isSourceEditing) && <section className={`panel intake-upload${isReviewTransitioning ? " validation-background" : ""}`} aria-labelledby="files-title">
-        <div className="intake-upload-content" inert={isReviewTransitioning}>
+      <section className={`panel intake-upload${reviewVisible && !isSourceEditing ? " validation-background" : ""}`} aria-labelledby="files-title">
+        <div className="intake-upload-content" inert={reviewVisible && !isSourceEditing}>
         <div className="intake-heading">
           <p className="issue-line">Sales file automation</p>
           <h1 id="files-title">Turn sales files into<br /><em>validated weekly reports.</em></h1>
@@ -198,10 +223,10 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
           </div>
         </div>
         </div>
-        {isReviewTransitioning && <div className="validation-source-overlay no-print"><span>Source validation complete</span></div>}
-      </section>}
+        {reviewVisible && !isSourceEditing && <div className="validation-source-overlay no-print"><span>Source validation complete</span></div>}
+      </section>
 
-      {reviewPageActive && <aside className="intake-status incoming-audit" aria-label="Automatic incoming data review">
+      {reviewVisible && <aside ref={validationReportRef} className="intake-status incoming-audit" aria-label="Automatic incoming data review">
           <section className={`data-review-card panel${flaggedRows ? " has-errors" : " all-clear"}`} aria-labelledby="data-review-title">
             <header className="data-review-head">
               <div><p className="section-number">01 / Data validation</p><h2 id="data-review-title">{flaggedRows ? "Order-data exceptions found" : "Superstore order data is ready"}</h2><p>{flaggedRows ? "Rows with missing or invalid order values stay out of the report." : "The historical order records passed validation and are ready for weekly or monthly analysis."}</p></div>
@@ -265,7 +290,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
             </section>
           </section>
         <div className="validation-actions no-print">
-          <button className="button ghost" type="button" onClick={editSource}>Change source file</button>
+          <button className="button ghost" type="button" onClick={() => setIsSourceEditing(true)}>Change source file</button>
           <button className="button ghost" type="button" onClick={downloadValidationResults}>Download validation results</button>
           <button className="button full continue-button" type="button" disabled={!ready} onClick={onProduceResults}><span>Build sales report</span><span className="continue-button-icon" aria-hidden="true">→</span></button>
         </div>
