@@ -39,13 +39,13 @@ export default function Home() {
     const timer = window.setTimeout(() => {
       window.clearInterval(anchorAtTop);
       window.scrollTo(0, 0);
-      root.style.scrollBehavior = previousScrollBehavior;
-      root.style.overflowAnchor = previousRootAnchor;
-      body.style.overflowAnchor = previousBodyAnchor;
     }, 640);
     return () => {
       window.clearInterval(anchorAtTop);
       window.clearTimeout(timer);
+      root.style.scrollBehavior = previousScrollBehavior;
+      root.style.overflowAnchor = previousRootAnchor;
+      body.style.overflowAnchor = previousBodyAnchor;
     };
   }, [page]);
 
