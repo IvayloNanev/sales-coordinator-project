@@ -163,17 +163,6 @@ export default function ReportDashboard({ records, startDate, endDate, generated
         </div>
       </section>
 
-      <aside className="management-narrative manager-summary"><span>“</span><div><p className="eyebrow">Manager summary</p><p>{priorRecords.length ? `Sales were ${changeLabel(changes.revenue).toLowerCase()} and profit was ${changeLabel(changes.profit).toLowerCase()}. ${categoryDrivers[0] ? `${categoryDrivers[0].label} had the largest category movement at ${categoryDrivers[0].revenueChange > 0 ? "+" : ""}${money(categoryDrivers[0].revenueChange)}.` : ""} ${weakestRegion ? `${weakestRegion.label} needs regional follow-up after a ${money(Math.abs(weakestRegion.revenueChange))} sales decline.` : "No region requires decline follow-up."}` : "No comparable prior-period rows were available in the uploaded source."}</p></div></aside>
-
-      <div className="metric-grid metric-grid-expanded">
-        <MetricCard featured label="Sales" value={money(report.totalRevenue)} note={changeLabel(changes.revenue)} trend={changes.revenue} />
-        <MetricCard featured label="Profit" value={money(report.totalProfit)} note={`${changeLabel(changes.profit)} · ${report.profitMargin.toFixed(1)}% margin`} trend={changes.profit} />
-        <MetricCard label="Average discount" value={`${(report.averageDiscount * 100).toFixed(1)}%`} note="Across visible line items" />
-        <MetricCard label="Orders" value={report.uniqueOrders.toLocaleString()} note={changeLabel(changes.orders)} trend={changes.orders} />
-        <MetricCard label="Units sold" value={report.totalUnits.toLocaleString()} note={changeLabel(changes.units)} trend={changes.units} />
-        <MetricCard label="Average order" value={money(report.averageOrderValue)} note={`Median ${money(report.medianOrderValue)}`} />
-      </div>
-
       <section className="monday-briefing" aria-labelledby="monday-briefing-title">
         <div className="briefing-heading"><div><p className="eyebrow">Marcus’s Monday priorities</p><h4 id="monday-briefing-title">Monday briefing</h4></div><span>Sales totals, period movement, and margin risk</span></div>
         <div className="briefing-grid">
@@ -200,6 +189,17 @@ export default function ReportDashboard({ records, startDate, endDate, generated
           </section>
         </div>
       </section>
+
+      <aside className="management-narrative manager-summary"><span>“</span><div><p className="eyebrow">Manager summary</p><p>{priorRecords.length ? `Sales were ${changeLabel(changes.revenue).toLowerCase()} and profit was ${changeLabel(changes.profit).toLowerCase()}. ${categoryDrivers[0] ? `${categoryDrivers[0].label} had the largest category movement at ${categoryDrivers[0].revenueChange > 0 ? "+" : ""}${money(categoryDrivers[0].revenueChange)}.` : ""} ${weakestRegion ? `${weakestRegion.label} needs regional follow-up after a ${money(Math.abs(weakestRegion.revenueChange))} sales decline.` : "No region requires decline follow-up."}` : "No comparable prior-period rows were available in the uploaded source."}</p></div></aside>
+
+      <div className="metric-grid metric-grid-expanded">
+        <MetricCard featured label="Sales" value={money(report.totalRevenue)} note={changeLabel(changes.revenue)} trend={changes.revenue} />
+        <MetricCard featured label="Profit" value={money(report.totalProfit)} note={`${changeLabel(changes.profit)} · ${report.profitMargin.toFixed(1)}% margin`} trend={changes.profit} />
+        <MetricCard label="Average discount" value={`${(report.averageDiscount * 100).toFixed(1)}%`} note="Across visible line items" />
+        <MetricCard label="Orders" value={report.uniqueOrders.toLocaleString()} note={changeLabel(changes.orders)} trend={changes.orders} />
+        <MetricCard label="Units sold" value={report.totalUnits.toLocaleString()} note={changeLabel(changes.units)} trend={changes.units} />
+        <MetricCard label="Average order" value={money(report.averageOrderValue)} note={`Median ${money(report.medianOrderValue)}`} />
+      </div>
 
       <div className="report-overview-single">
         <section className="analysis-panel revenue-pulse" aria-labelledby="revenue-pulse-title"><div className="card-heading"><h4 id="revenue-pulse-title">Daily revenue</h4><span>Best · {shortDate(report.bestDay?.date)} · {money(report.bestDay?.revenue ?? 0)}</span></div><DailyRevenueChart days={report.daily} /></section>
