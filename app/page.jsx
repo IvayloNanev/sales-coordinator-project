@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 import ProgressHeader from "./components/ProgressHeader";
 import ReportSetup from "./components/ReportSetup";
 import ReportDashboard from "./components/ReportDashboard";
@@ -23,6 +23,19 @@ export default function Home() {
   const [intakeAnalysis, setIntakeAnalysis] = useState({ files: [], coverage: [] });
   const report = useMemo(() => calculateReport(validation?.validRecords ?? []), [validation]);
   const resultsReady = Boolean(validation?.validRecords.length && setup.startDate && setup.endDate);
+
+  useLayoutEffect(() => {
+    if (page !== "results") return undefined;
+    const root = document.documentElement;
+    const previousScrollBehavior = root.style.scrollBehavior;
+    root.style.scrollBehavior = "auto";
+    window.scrollTo(0, 0);
+    const frame = window.requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+      root.style.scrollBehavior = previousScrollBehavior;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [page]);
 
   const analyzeFiles = async (files) => {
     if (!files.length) {
@@ -89,16 +102,7 @@ export default function Home() {
     if (destination === "results" && !generatedDate) {
       setGeneratedDate(new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date()));
     }
-    const root = document.documentElement;
-    const previousScrollBehavior = root.style.scrollBehavior;
-    root.style.scrollBehavior = "auto";
     setPage(destination);
-    window.requestAnimationFrame(() => {
-      window.scrollTo(0, 0);
-      window.requestAnimationFrame(() => {
-        root.style.scrollBehavior = previousScrollBehavior;
-      });
-    });
   };
 
   const produceResults = () => navigate("results");
