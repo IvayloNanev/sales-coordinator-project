@@ -101,7 +101,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
     if (!ready || isBuildingReport) return;
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     setIsBuildingReport(true);
-    window.setTimeout(onProduceResults, 120);
+    window.setTimeout(onProduceResults, 520);
   };
 
   const addSelectedFiles = async (incoming) => {
@@ -283,6 +283,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
           <button className="button secondary" type="button" onClick={downloadValidationResults}>Download validation results</button>
         </div>
         {!ready && <p className="disabled-hint">Upload at least one file with a readable sales table and valid dated rows to continue.</p>}
+        {isBuildingReport && <div className="report-build-overlay" role="status"><span>Preparing Marcus’s report…</span></div>}
       </aside>}
     </div>
   );

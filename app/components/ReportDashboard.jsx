@@ -35,6 +35,27 @@ function VisualRanking({ title, eyebrow, rows, labelKey, valueKey = "revenue", v
   );
 }
 
+function MixWheel({ rows, total, money }) {
+  const palette = ["#6f4c19", "#b18135", "#dfbd70", "#8a7353"];
+  let cursor = 0;
+  const segments = rows.slice(0, 4).map((row, index) => {
+    const share = total ? (row.revenue / total) * 100 : 0;
+    const start = cursor;
+    cursor += share;
+    return { ...row, share, start, end: cursor, color: palette[index] };
+  });
+  const gradient = segments.map((segment) => `${segment.color} ${segment.start}% ${segment.end}%`).join(", ");
+  return (
+    <article className="visual-card mix-wheel-card">
+      <header><div><span>Portfolio balance</span><h5>Category mix</h5></div><strong>{segments.length}</strong></header>
+      <div className="mix-wheel-layout">
+        <div className="mix-wheel" style={{ "--mix-gradient": `conic-gradient(${gradient || "#d7c9aa 0 100%"})` }}><span><strong>{money(total)}</strong><small>Total sales</small></span></div>
+        <ul>{segments.map((segment) => <li key={segment.productCategory}><i style={{ background: segment.color }} /><span>{segment.productCategory}</span><b>{segment.share.toFixed(1)}%</b></li>)}</ul>
+      </div>
+    </article>
+  );
+}
+
 function DataTable({ columns, rows, label }) {
   return <div className="table-wrap"><table><caption className="sr-only">{label} sales breakdown</caption><thead><tr>{columns.map((column) => <th scope="col" key={column.key}>{column.label}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={`${label}-${index}`}>{columns.map((column) => { const value = column.render ? column.render(row[column.key], row) : row[column.key]; return <td key={column.key} title={typeof value === "string" && value.length > 36 ? value : undefined}>{value}</td>; })}</tr>)}</tbody></table></div>;
 }
@@ -437,10 +458,11 @@ export default function ReportDashboard({ records, startDate, endDate, generated
           <div><p className="eyebrow">Performance at a glance</p><h4 id="visual-overview-title">Where the business is moving.</h4></div>
           <p>Relative contribution across the current filtered period.</p>
         </div>
-        <div className="visual-grid">
+        <div className="visual-grid chart-reveal is-visible">
           <VisualRanking title="Sales by category" eyebrow="Revenue mix" rows={report.categories} labelKey="productCategory" valueFormatter={money} />
           <VisualRanking title="Sales by region" eyebrow="Market strength" rows={report.regions} labelKey="salesRegion" valueFormatter={money} tone="amber" />
           <VisualRanking title="Profit leaders" eyebrow="Margin contribution" rows={[...report.products].sort((a, b) => b.profit - a.profit)} labelKey="product" valueKey="profit" valueFormatter={money} tone="green" />
+          <MixWheel rows={report.categories} total={report.totalRevenue} money={money} />
         </div>
       </section>
 
