@@ -21,8 +21,8 @@ export default function Home() {
   const [generatedDate, setGeneratedDate] = useState("");
   const [isValidating, setIsValidating] = useState(false);
   const [intakeAnalysis, setIntakeAnalysis] = useState({ files: [], coverage: [] });
+  const [homeResetKey, setHomeResetKey] = useState(0);
   const resultsReady = Boolean(validation?.validRecords.length && setup.startDate && setup.endDate);
-  const hasCurrentWork = Boolean(setup.files.length || validation || page === "results");
 
   const analyzeFiles = async (files) => {
     if (!files.length) {
@@ -110,17 +110,18 @@ export default function Home() {
     setGeneratedDate("");
     setIsValidating(false);
     setIntakeAnalysis({ files: [], coverage: [] });
+    setHomeResetKey((current) => current + 1);
     setPage("upload");
     window.scrollTo({ top: 0, behavior: "auto" });
   };
 
   return (
     <div className="app-shell">
-      <ProgressHeader onNavigate={() => navigate("upload")} hasCurrentWork={hasCurrentWork} />
+      <ProgressHeader onNavigate={restart} />
       <main id="main" className="two-page-main" aria-busy={isValidating}>
         {page === "upload" ? (
           <section className="page-view intake-page" aria-label="Upload and validate sales files">
-            <ReportSetup {...setup} validation={validation} totalRecords={totalRecords} intakeAnalysis={intakeAnalysis} isValidating={isValidating} onFiles={addFiles} onReplaceFiles={analyzeFiles} onProduceResults={produceResults} />
+            <ReportSetup key={homeResetKey} {...setup} validation={validation} totalRecords={totalRecords} intakeAnalysis={intakeAnalysis} isValidating={isValidating} onFiles={addFiles} onReplaceFiles={analyzeFiles} onProduceResults={produceResults} />
           </section>
         ) : (
           <section className="page-view results-page" aria-label="Generated sales results">

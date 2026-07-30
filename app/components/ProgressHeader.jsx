@@ -1,7 +1,7 @@
-export default function ProgressHeader({ onNavigate, hasCurrentWork }) {
+export default function ProgressHeader({ onNavigate }) {
   return (
     <header className="app-header no-print">
-      <button className="brand brand-button" type="button" onClick={onNavigate} aria-label={hasCurrentWork ? "Return to the current Salescraft source and validation" : "Salescraft home"}>
+      <button className="brand brand-button" type="button" onClick={onNavigate} aria-label="Salescraft home">
         <span className="brand-mark" aria-hidden="true" />
         <span>Sales<span>craft</span></span>
       </button>
