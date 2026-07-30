@@ -3,7 +3,9 @@ import {
   calculateReport,
   comparisonDrivers,
   formatCurrency,
+  generateSummary,
   performanceChange,
+  previousCompletedWeek,
   previousPeriod,
   recordsToCsv,
   SalesDataManager,
@@ -228,6 +230,30 @@ export default function ReportDashboard({ records, startDate, endDate, generated
     () => new Map(regionDrivers.map((driver) => [driver.label, driver.revenueChange])),
     [regionDrivers],
   );
+  const largestRegionalDecline = useMemo(
+    () => regionDrivers.filter((driver) => driver.revenueChange < 0).sort((a, b) => a.revenueChange - b.revenueChange)[0] ?? null,
+    [regionDrivers],
+  );
+  const regionalContributors = useMemo(() => {
+    if (!largestRegionalDecline) return [];
+    const matchesRegion = (record) => record.salesRegion.trim().toLowerCase() === largestRegionalDecline.label.trim().toLowerCase();
+    return comparisonDrivers(
+      currentRecords.filter(matchesRegion),
+      priorRecords.filter(matchesRegion),
+      "product",
+      5,
+    );
+  }, [currentRecords, priorRecords, largestRegionalDecline]);
+  const regionalCategoryContributors = useMemo(() => {
+    if (!largestRegionalDecline) return [];
+    const matchesRegion = (record) => record.salesRegion.trim().toLowerCase() === largestRegionalDecline.label.trim().toLowerCase();
+    return comparisonDrivers(
+      currentRecords.filter(matchesRegion),
+      priorRecords.filter(matchesRegion),
+      "productCategory",
+      3,
+    );
+  }, [currentRecords, priorRecords, largestRegionalDecline]);
   const highestDiscountProducts = useMemo(
     () => report.products
       .filter((product) => product.averageDiscount > 0)
@@ -246,15 +272,21 @@ export default function ReportDashboard({ records, startDate, endDate, generated
       || order.salesRegion.toLowerCase().includes(query)
     ));
   }, [report.orders, orderQuery]);
-  const presetRanges = useMemo(() => ({
-    week: { startDate: shiftDate(endDate, -6) < startDate ? startDate : shiftDate(endDate, -6), endDate },
+  const presetRanges = useMemo(() => {
+    const completedWeek = previousCompletedWeek(endDate);
+    const usableCompletedWeek = completedWeek && completedWeek.endDate >= startDate
+      ? { startDate: completedWeek.startDate < startDate ? startDate : completedWeek.startDate, endDate: completedWeek.endDate }
+      : { startDate: shiftDate(endDate, -6) < startDate ? startDate : shiftDate(endDate, -6), endDate };
+    return ({
+    week: usableCompletedWeek,
     month: { startDate: calendarMonthRange(endDate).startDate < startDate ? startDate : calendarMonthRange(endDate).startDate, endDate },
     "previous-month": {
       startDate: calendarMonthRange(endDate, -1).startDate < startDate ? startDate : calendarMonthRange(endDate, -1).startDate,
       endDate: calendarMonthRange(endDate, -1).endDate > endDate ? endDate : calendarMonthRange(endDate, -1).endDate,
     },
     all: { startDate, endDate },
-  }), [endDate, startDate]);
+    });
+  }, [endDate, startDate]);
   const activePeriod = Object.entries(presetRanges).find(([, range]) => range.startDate === filters.startDate && range.endDate === filters.endDate)?.[0] ?? "";
   const filtersDirty = filters.startDate !== defaultStart || filters.endDate !== endDate || Boolean(filters.region || filters.category || filters.segment);
   const activeFilterText = [
@@ -264,6 +296,12 @@ export default function ReportDashboard({ records, startDate, endDate, generated
     filters.segment || "All segments",
     countLabel(report.uniqueOrders, "matching order"),
   ].join(" · ");
+  const managerSummary = useMemo(() => generateSummary(
+    report,
+    shortDate(filters.startDate),
+    shortDate(filters.endDate),
+    { changes, largestDecline: largestRegionalDecline, contributingDrivers: regionalContributors },
+  ), [report, filters.startDate, filters.endDate, changes, largestRegionalDecline, regionalContributors]);
 
   useEffect(() => {
     reportTitleRef.current?.focus({ preventScroll: true });
@@ -333,7 +371,7 @@ export default function ReportDashboard({ records, startDate, endDate, generated
         <button type="button" disabled={!filtersDirty} onClick={resetFilters}>Reset filters</button>
         <div className="period-presets" aria-label="Quick reporting periods">
           <span>Quick periods</span>
-          <button type="button" aria-pressed={activePeriod === "week"} onClick={() => applyPeriod("week")}>Latest week</button>
+          <button type="button" aria-pressed={activePeriod === "week"} onClick={() => applyPeriod("week")}>Previous completed week</button>
           <button type="button" aria-pressed={activePeriod === "month"} onClick={() => applyPeriod("month")}>Latest month</button>
           <button type="button" aria-pressed={activePeriod === "previous-month"} onClick={() => applyPeriod("previous-month")}>Previous month</button>
           <button type="button" aria-pressed={activePeriod === "all"} onClick={() => applyPeriod("all")}>All dates</button>
@@ -377,6 +415,22 @@ export default function ReportDashboard({ records, startDate, endDate, generated
         <MetricCard label="Units sold" value={report.totalUnits.toLocaleString()} note={changeLabel(changes.units)} trend={changes.units} />
         <MetricCard label="Average order" value={money(report.averageOrderValue)} note={`Median ${money(report.medianOrderValue)}`} />
       </div>
+
+      <section className="manager-summary-card" aria-labelledby="manager-summary-title">
+        <div className="manager-summary-label"><span aria-hidden="true">M</span><div><p className="eyebrow">Ready for Monday</p><h4 id="manager-summary-title">Manager summary</h4></div></div>
+        <div className="manager-summary-copy">
+          <p>{managerSummary}</p>
+          <small>Comparison: {shortDate(priorRange?.startDate)}–{shortDate(priorRange?.endDate)} · Current period: {shortDate(filters.startDate)}–{shortDate(filters.endDate)}</small>
+        </div>
+        {largestRegionalDecline ? <aside className="driver-evidence">
+          <span>Why {largestRegionalDecline.label} changed</span>
+          <strong>{money(largestRegionalDecline.revenueChange)} vs prior</strong>
+          <ul>
+            {regionalContributors.filter((driver) => driver.revenueChange < 0).slice(0, 3).map((driver) => <li key={driver.label}><span>{driver.label}</span><b>{money(driver.revenueChange)}</b></li>)}
+            {regionalCategoryContributors.filter((driver) => driver.revenueChange < 0).slice(0, 2).map((driver) => <li key={`category-${driver.label}`}><span>{driver.label} category</span><b>{money(driver.revenueChange)}</b></li>)}
+          </ul>
+        </aside> : <aside className="driver-evidence positive-evidence"><span>Regional movement</span><strong>No region declined versus the prior period.</strong></aside>}
+      </section>
 
       <section className="report-visuals" aria-labelledby="visual-overview-title">
         <div className="visuals-heading">

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { calculateReport, comparisonDrivers, getDateRange, groupByRegion, groupByStore, normalizeDate, parseCsvText, parseInputFile, performanceChange, previousPeriod, recordsToCsv, SalesDataManager, validateRecords } from "../lib/sales.js";
+import { calculateReport, comparisonDrivers, generateSummary, getDateRange, groupByRegion, groupByStore, normalizeDate, parseCsvText, parseInputFile, performanceChange, previousCompletedWeek, previousPeriod, recordsToCsv, SalesDataManager, validateRecords } from "../lib/sales.js";
 
 const validFixture = [
   { storeId: "101", storeName: "Downtown", orderNumber: "A-1", product: "Desk", productCategory: "Furniture", salesRegion: "North", quantitySold: 2, revenue: 800 },
@@ -362,6 +362,10 @@ test("calculates profit metrics, prior periods, and performance drivers", () => 
     startDate: "2026-01-01",
     endDate: "2026-01-07",
   });
+  assert.deepEqual(previousCompletedWeek("2026-01-14"), {
+    startDate: "2026-01-05",
+    endDate: "2026-01-11",
+  });
   assert.equal(performanceChange(current, previous).revenue.percentage, 200);
   assert.deepEqual(comparisonDrivers(currentRecords, previousRecords, "productCategory"), [
     {
@@ -383,6 +387,11 @@ test("calculates profit metrics, prior periods, and performance drivers", () => 
       profitChange: -10,
     },
   ]);
+  assert.match(generateSummary(current, "Jan 8", "Jan 9", {
+    changes: performanceChange(current, previous),
+    largestDecline: { label: "East", revenueChange: -75 },
+    contributingDrivers: [{ label: "Chairs", revenueChange: -50 }],
+  }), /largest drag was East.*Chairs/s);
 });
 
 test("accepts tabular JSON, TSV, and flags unreadable file formats", async () => {
