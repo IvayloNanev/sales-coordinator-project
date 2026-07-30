@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import useChartReveal from "../hooks/useChartReveal";
 
 const formatPeriod = (startDate, endDate) => {
   if (!startDate || !endDate) return "Waiting for valid dates";
@@ -61,8 +62,13 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   const [isBuildingReport, setIsBuildingReport] = useState(false);
   const [pendingFiles, setPendingFiles] = useState([]);
   const [isProcessingValidation, setIsProcessingValidation] = useState(false);
-  const validationTitleRef = useRef(null);
+  const [activeReviewPanel, setActiveReviewPanel] = useState("");
+  const [cardsSequenceComplete, setCardsSequenceComplete] = useState(false);
   const reviewVisible = Boolean(validation && !isValidating);
+  const validationTitleRef = useRef(null);
+  const reviewDialogRef = useRef(null);
+  const reviewCardsRef = useChartReveal(reviewVisible, { threshold: 0.06, rootMargin: "0px 0px 24% 0px" });
+  const finalActionRef = useChartReveal(reviewVisible && cardsSequenceComplete, { threshold: 0.05, rootMargin: "0px 0px 22% 0px" });
   const filesReady = files.length > 0;
   const periodReady = Boolean(startDate && endDate && startDate <= endDate);
   const validationReady = Boolean(validation && validation.validRecords.length);
@@ -89,8 +95,16 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
 
   useEffect(() => {
     if (!reviewVisible) return;
+    window.scrollTo({ top: 0, behavior: "auto" });
     validationTitleRef.current?.focus({ preventScroll: true });
   }, [reviewVisible]);
+
+  useEffect(() => {
+    const dialog = reviewDialogRef.current;
+    if (!dialog) return;
+    if (activeReviewPanel && !dialog.open) dialog.showModal();
+    if (!activeReviewPanel && dialog.open) dialog.close();
+  }, [activeReviewPanel]);
 
   const downloadValidationResults = () => {
     const rows = [
@@ -111,15 +125,15 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
 
   const processSelectedFiles = async (incoming, replaceCurrent = isSourceEditing) => {
     if (!incoming.length || isProcessingValidation) return;
-    const scrollTop = window.scrollY;
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    setCardsSequenceComplete(false);
     setIsProcessingValidation(true);
     try {
       await new Promise((resolve) => window.setTimeout(resolve, 180));
       await (replaceCurrent ? onReplaceFiles(incoming) : onFiles(incoming));
       setPendingFiles([]);
       setIsSourceEditing(false);
-      requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo({ top: scrollTop, behavior: "auto" })));
+      requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" })));
     } finally {
       setIsProcessingValidation(false);
     }
@@ -142,6 +156,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
 
   const loadKaggleDataset = async () => {
     setIsLoadingKaggle(true);
+    setCardsSequenceComplete(false);
     setIsProcessingValidation(true);
     setKaggleError("");
     try {
@@ -175,12 +190,18 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
       <section className={`panel intake-upload${reviewVisible && !isSourceEditing ? " source-complete-panel" : ""}`} aria-labelledby="files-title" aria-busy={isValidating}>
         {reviewVisible && !isSourceEditing ? (
           <div className="completed-source-summary">
-            <div>
-              <p className="section-number">Source complete</p>
-              <h1 id="files-title">{countLabel(files.length, "file")} validated and ready</h1>
-              <p>{totalRecords.toLocaleString()} rows checked · {formatPeriod(startDate, endDate)}</p>
+            <div className="summary-intro">
+              <p className="section-number">Import summary</p>
+              <h1 id="files-title">Your sales at a glance</h1>
+              <p>A concise snapshot of the source used for this report.</p>
             </div>
-            <button className="button secondary" type="button" onClick={() => { setPendingFiles([]); setIsSourceEditing(true); }}>Replace source files</button>
+            <dl className="import-summary-stats">
+              <div><dt>Files</dt><dd>{files.length.toLocaleString()}</dd></div>
+              <div><dt>Rows received</dt><dd>{totalRecords.toLocaleString()}</dd></div>
+              <div><dt>Columns</dt><dd>{columnCount.toLocaleString()}</dd></div>
+              <div><dt>Reporting period</dt><dd>{formatPeriod(startDate, endDate)}</dd></div>
+            </dl>
+            <button className="button secondary summary-replace-action" type="button" onClick={() => { setPendingFiles([]); setIsSourceEditing(true); }}>Replace files</button>
           </div>
         ) : <div className="intake-upload-content">
         <div className="intake-heading">
@@ -224,27 +245,53 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
       {reviewVisible && <aside className={`intake-status incoming-audit${isBuildingReport ? " report-transitioning" : ""}`} aria-label="Automatic incoming data review">
           <section className={`data-review-card panel${flaggedRows ? " has-errors" : " all-clear"}`} aria-labelledby="data-review-title">
             <header className="data-review-head">
-              <div><p className="section-number">Data validation</p><h2 id="data-review-title" ref={validationTitleRef} tabIndex="-1">{flaggedRows ? "Review the flagged rows" : "Sales data is ready"}</h2><p>{flaggedRows ? "Invalid rows will stay out of the report; valid rows can still be analyzed." : "The file passed validation and can be used for weekly or monthly reporting."}</p></div>
+              <div><p className="section-number">Validation results</p><h2 id="data-review-title" ref={validationTitleRef} tabIndex="-1">{flaggedRows ? "Ready—with exclusions" : "Ready to report"}</h2><p>{flaggedRows ? "Review what passed, what was excluded, and why before building the report." : "Required fields, dates, and business rules passed. The validated rows are ready for analysis."}</p></div>
               <span className={`review-badge ${flaggedRows ? "warning" : "success"}`}>{flaggedRows ? `${flaggedRows} flagged` : "Passed"}</span>
             </header>
 
             <section className="validation-command" aria-label="Validation summary">
               <div className="validation-command-stats">
-                <p><span>Status</span><strong className={flaggedRows ? "negative" : "positive"}>{flaggedRows ? "Review" : "Ready"}</strong></p>
-                <p><span>Rows</span><strong>{totalRecords.toLocaleString()}</strong></p>
-                <p><span>Columns</span><strong>{columnCount}</strong></p>
-                <p><span>Errors</span><strong className={flaggedRows ? "negative" : ""}>{flaggedRows.toLocaleString()}</strong></p>
-                <p><span>Date coverage</span><strong>{formatPeriod(startDate, endDate)}</strong></p>
+                <p><span>Validated rows</span><strong className="positive">{validation.validRecords.length.toLocaleString()}</strong></p>
+                <p><span>Excluded rows</span><strong className={flaggedRows ? "negative" : ""}>{flaggedRows.toLocaleString()}</strong></p>
+                <p><span>Rule checks</span><strong>{qualityChecks.filter(([, count]) => !count).length} of {qualityChecks.length} passed</strong></p>
+                <p><span>Report status</span><strong className={flaggedRows ? "negative" : "positive"}>{flaggedRows ? "Ready with exclusions" : "Ready"}</strong></p>
               </div>
-              <button className="button secondary compact-button validation-download-action no-print" type="button" onClick={downloadValidationResults}>Download validation results</button>
+              <button className="button secondary compact-button validation-download-action no-print" type="button" onClick={downloadValidationResults}>Download validation log</button>
             </section>
 
-            <details className="validation-disclosure source-file-summary">
+            <section className="review-overview-grid" ref={reviewCardsRef} aria-label="Validation review areas">
+              <article className="review-overview-card source-card">
+                <span className="review-card-icon" aria-hidden="true">▤</span>
+                <div><p className="section-number">Source</p><h3>{countLabel(intakeAnalysis.files.length, "file")} received</h3><p>{primaryFile.name ?? files[0]?.name ?? "Uploaded sales data"}</p></div>
+                <span className="review-card-status pass">Ready</span>
+                <button type="button" onClick={() => setActiveReviewPanel("source")}>View source details<span aria-hidden="true">→</span></button>
+              </article>
+              <article className="review-overview-card columns-card">
+                <span className="review-card-icon" aria-hidden="true">▦</span>
+                <div><p className="section-number">Data shape</p><h3>{columnCount} columns</h3><p>{primaryFile.previewRows.length} preview rows available for inspection.</p></div>
+                <span className="review-card-status">{primaryFile.columnNames.filter((column) => CORE_REPORT_COLUMNS.has(column)).length} report fields</span>
+                <button type="button" onClick={() => setActiveReviewPanel("columns")}>Inspect columns<span aria-hidden="true">→</span></button>
+              </article>
+              <article className="review-overview-card rules-card">
+                <span className="review-card-icon" aria-hidden="true">✓</span>
+                <div><p className="section-number">Quality</p><h3>{qualityChecks.filter(([, count]) => !count).length} of {qualityChecks.length} checks passed</h3><p>{flaggedRows ? `${countLabel(flaggedRows, "row")} excluded from reporting.` : "No structural issues found."}</p></div>
+                <span className={`review-card-status ${flaggedRows ? "flag" : "pass"}`}>{flaggedRows ? "Review" : "All clear"}</span>
+                <button type="button" onClick={() => setActiveReviewPanel("rules")}>Review checks<span aria-hidden="true">→</span></button>
+              </article>
+              <article className="review-overview-card scope-card" onAnimationEnd={(event) => { if (event.target === event.currentTarget && event.animationName === "guided-card-focus") setCardsSequenceComplete(true); }}>
+                <span className="review-card-icon" aria-hidden="true">◎</span>
+                <div><p className="section-number">Reporting scope</p><h3>6 analyses supported</h3><p>See what this source can answer—and what it cannot.</p></div>
+                <span className="review-card-status">Defined</span>
+                <button type="button" onClick={() => setActiveReviewPanel("scope")}>View report scope<span aria-hidden="true">→</span></button>
+              </article>
+            </section>
+
+            <details className="validation-disclosure source-file-summary legacy-review-disclosure">
               <summary><span>{intakeAnalysis.files.length === 1 ? "Source file" : "Source files"}</span><small>{countLabel(intakeAnalysis.files.length, "file")} · view details</small></summary>
               <ul>{intakeAnalysis.files.map((item, index) => <li key={`${item.name}-summary-${index}`}><span className="source-file-type">{item.type}</span><div><strong>{item.name}</strong><small>{Math.max(1, Math.round(item.size / 1024)).toLocaleString()} KB · {item.startDate ? `${formatPeriod(item.startDate, item.endDate)} coverage` : "No readable date coverage"}</small></div><span className={`source-status ${item.issues ? "flag" : "pass"}`}>{item.issues ? countLabel(item.issues, "issue") : "Ready"}</span></li>)}</ul>
             </details>
 
-            <details className="validation-disclosure dataset-contents">
+            <details className="validation-disclosure dataset-contents legacy-review-disclosure">
               <summary><span>Columns and sample data</span><small>{columnCount} columns · {primaryFile.previewRows.length} preview rows</small></summary>
               <div className="validation-disclosure-body">
               <div className="dataset-contents-head">
@@ -271,7 +318,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
                 {validation.invalidRecords.length > 8 && <p>+ {validation.invalidRecords.length - 8} more issues will be excluded from results.</p>}
               </details>
             ) : null}
-            <div className="validation-detail-grid">
+            <div className="validation-detail-grid legacy-review-disclosure">
               <details className="validation-disclosure quality-checks">
                 <summary><span>Business-rule checks</span><small>{qualityChecks.filter(([, count]) => !count).length}/{qualityChecks.length} passed</small></summary>
                 <div className="validation-disclosure-body">
@@ -296,9 +343,26 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
                 </div>
               </details>
             </div>
+
+            <dialog className="review-detail-dialog" ref={reviewDialogRef} onClose={() => setActiveReviewPanel("")}>
+              <div className="review-dialog-head">
+                <div><p className="section-number">Validation detail</p><h3>{activeReviewPanel === "source" ? "Source files" : activeReviewPanel === "columns" ? "Columns and sample data" : activeReviewPanel === "rules" ? "Business-rule checks" : "Reporting scope"}</h3></div>
+                <button type="button" aria-label="Close validation detail" onClick={() => setActiveReviewPanel("")}>×</button>
+              </div>
+              <div className="review-dialog-body">
+                {activeReviewPanel === "source" && <ul className="dialog-source-list">{intakeAnalysis.files.map((item, index) => <li key={`${item.name}-dialog-${index}`}><span className="source-file-type">{item.type}</span><div><strong>{item.name}</strong><small>{Math.max(1, Math.round(item.size / 1024)).toLocaleString()} KB · {item.startDate ? formatPeriod(item.startDate, item.endDate) : "No readable date coverage"}</small></div><span className={`source-status ${item.issues ? "flag" : "pass"}`}>{item.issues ? countLabel(item.issues, "issue") : "Ready"}</span></li>)}</ul>}
+                {activeReviewPanel === "columns" && <><p className="audit-explainer">Core fields power the report; supporting fields provide identifiers, geography, and shipping detail.</p><div className="table-wrap dialog-table"><table><thead><tr><th>Column</th><th>Use</th><th>Coverage</th><th>Example</th></tr></thead><tbody>{primaryFile.columnNames.map((column, index) => { const profile = primaryFile.columnProfiles?.[index] ?? { populated: 0, total: totalRecords, invalid: 0 }; return <tr key={`${column}-dialog-${index}`}><td><strong>{column}</strong><small>{COLUMN_DETAILS[column] ?? "Additional source value"}</small></td><td><span className={`column-use ${CORE_REPORT_COLUMNS.has(column) ? "core" : "supporting"}`}>{CORE_REPORT_COLUMNS.has(column) ? "Core" : "Supporting"}</span></td><td>{profile.populated.toLocaleString()} / {profile.total.toLocaleString()}</td><td>{primaryFile.previewRows[0]?.[index] || "—"}</td></tr>; })}</tbody></table></div></>}
+                {activeReviewPanel === "rules" && <><ul className="dialog-check-list">{qualityChecks.map(([label, count, detail]) => <li key={`${label}-dialog`}><span className={count ? "flag" : "pass"}>{count ? "!" : "✓"}</span><div><strong>{label}</strong><small>{detail}</small></div></li>)}</ul><div className="dialog-warning-grid"><p><strong>{unprofitableRows.toLocaleString()}</strong> unprofitable line items</p><p><strong>{highDiscountRows.toLocaleString()}</strong> items discounted 40%+</p><p><strong>{optionalMeasureWarnings.toLocaleString()}</strong> optional-value warnings</p></div></>}
+                {activeReviewPanel === "scope" && <div className="reporting-scope-grid dialog-scope-grid"><div className="reporting-readiness"><h4><span aria-hidden="true">✓</span> Supported</h4><ul>{["Weekly and monthly sales", "Prior-period comparisons", "Region and category performance", "Product and segment analysis", "Discount impact on profit", "Order and shipping-time tracking"].map((item) => <li key={`${item}-dialog`}>{item}</li>)}</ul></div><div className="dataset-limitations"><h4><span aria-hidden="true">—</span> Not available</h4><ul>{["Order status, returns, or cancellations", "Inventory and stock levels", "Delivery dates or late-delivery flags", "Promotion or campaign names", "Sales representative ownership", "Issue notes and resolution status"].map((item) => <li key={`${item}-dialog`}>{item}</li>)}</ul></div></div>}
+              </div>
+            </dialog>
           </section>
-        <div className="validation-actions no-print">
-          <p>{ready ? "Validation is complete. Build the report from the valid rows reviewed above." : "Upload at least one file with a readable sales table and valid dated rows to continue."}</p>
+        <div className="validation-actions no-print" ref={finalActionRef}>
+          <div className="final-step-copy">
+            <p className="section-number">Final step</p>
+            <h3>Publish the validated report</h3>
+            <p>{ready ? "Validation is complete. Build the report from the valid rows reviewed above." : "Upload at least one file with a readable sales table and valid dated rows to continue."}</p>
+          </div>
           <button className="button primary validation-primary-action" type="button" aria-busy={isBuildingReport} disabled={!ready || isBuildingReport} onClick={buildSalesReport}>{isBuildingReport ? "Opening report…" : "Build sales report"}<span aria-hidden="true">→</span></button>
         </div>
         {isBuildingReport && <div className="report-build-overlay" role="status"><span>Preparing Marcus’s report…</span></div>}
