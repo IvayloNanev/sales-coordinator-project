@@ -236,7 +236,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
                 <p><span>Errors</span><strong className={flaggedRows ? "negative" : ""}>{flaggedRows.toLocaleString()}</strong></p>
                 <p><span>Date coverage</span><strong>{formatPeriod(startDate, endDate)}</strong></p>
               </div>
-              <button className="button primary validation-primary-action" type="button" aria-busy={isBuildingReport} disabled={!ready || isBuildingReport} onClick={buildSalesReport}>{isBuildingReport ? "Opening report…" : "Build sales report"}<span aria-hidden="true">→</span></button>
+              <button className="button secondary validation-download-action no-print" type="button" onClick={downloadValidationResults}>Download validation results</button>
             </section>
 
             <details className="validation-disclosure source-file-summary">
@@ -298,10 +298,9 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
             </div>
           </section>
         <div className="validation-actions no-print">
-          <p>Replacing the source starts validation again; your current report remains until new files are selected.</p>
-          <button className="button secondary" type="button" onClick={downloadValidationResults}>Download validation results</button>
+          <p>{ready ? "Validation is complete. Build the report from the valid rows reviewed above." : "Upload at least one file with a readable sales table and valid dated rows to continue."}</p>
+          <button className="button primary validation-primary-action" type="button" aria-busy={isBuildingReport} disabled={!ready || isBuildingReport} onClick={buildSalesReport}>{isBuildingReport ? "Opening report…" : "Build sales report"}<span aria-hidden="true">→</span></button>
         </div>
-        {!ready && <p className="disabled-hint">Upload at least one file with a readable sales table and valid dated rows to continue.</p>}
         {isBuildingReport && <div className="report-build-overlay" role="status"><span>Preparing Marcus’s report…</span></div>}
       </aside>}
     </div>
