@@ -214,7 +214,7 @@ summary::-webkit-details-marker { display: none; }
 .intake-heading h1 {
   max-width: 920px;
   margin: 0 auto 14px;
-  font-family: "Playfair Display", Georgia, serif;
+  font-family: "DM Sans", system-ui, sans-serif;
   font-size: clamp(44px, 6vw, 74px);
   font-weight: 600;
   letter-spacing: -.045em;
@@ -230,10 +230,8 @@ summary::-webkit-details-marker { display: none; }
 }
 .headline-files {
   display: inline-block;
-  font-family: "DM Sans", system-ui, sans-serif;
-  font-size: .82em;
-  font-weight: 700;
-  letter-spacing: -.02em;
+  font: inherit;
+  letter-spacing: inherit;
 }
 .intake-heading > p:last-child {
   max-width: 680px;
@@ -419,19 +417,21 @@ summary::-webkit-details-marker { display: none; }
 }
 .completed-source-summary {
   display: grid;
-  grid-template-columns: minmax(210px, .8fr) minmax(460px, 1.7fr) auto;
+  grid-template-columns: minmax(300px, .9fr) minmax(0, 1.7fr) auto;
   align-items: center;
   gap: 28px;
 }
 .completed-source-summary h1 {
   margin: 2px 0 3px;
   font-family: "Playfair Display", Georgia, serif;
-  font-size: clamp(25px, 2.7vw, 36px);
+  font-size: clamp(25px, 2.4vw, 32px);
+  letter-spacing: -.025em;
   line-height: 1.05;
+  overflow-wrap: normal;
   white-space: nowrap;
 }
 .completed-source-summary p { margin: 0; color: var(--muted); font-size: 13px; }
-.summary-intro { min-width: 0; padding-right: 28px; }
+.summary-intro { min-width: 0; padding-right: 18px; }
 .import-summary-stats {
   display: grid;
   grid-template-columns: .55fr .8fr .65fr 1.45fr;
@@ -561,12 +561,12 @@ summary::-webkit-details-marker { display: none; }
 .data-review-head h2 {
   margin-bottom: 5px;
   font-family: "Playfair Display", Georgia, serif;
-  font-size: clamp(30px, 4vw, 44px);
-  letter-spacing: -.03em;
+  font-size: clamp(25px, 2.4vw, 32px);
+  letter-spacing: -.025em;
+  line-height: 1.05;
 }
 .data-review-head h2,
 .data-review-head p,
-.completed-source-summary h1,
 .completed-source-summary p { overflow-wrap: anywhere; }
 .data-review-head p:last-child { max-width: 700px; margin-bottom: 0; color: var(--muted); }
 .review-badge {
@@ -732,15 +732,16 @@ summary::-webkit-details-marker { display: none; }
   70% { opacity: 1; transform: translateY(-1px) scale(1.02); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
-.review-overview-card h3 { margin: 3px 0 5px; font-family: "Playfair Display", Georgia, serif; font-size: 23px; }
-.review-overview-card div > p:last-child { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.review-overview-card .section-number { font-size: 9.5px; }
+.review-overview-card h3 { margin: 3px 0 5px; font-family: "Playfair Display", Georgia, serif; font-size: 18px; }
+.review-overview-card div > p:last-child { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.4; }
 .review-card-status {
   align-self: start;
   padding: 5px 8px;
   border-radius: 999px;
   color: var(--gold-dark);
   background: rgba(234, 217, 173, .35);
-  font-size: 10px;
+  font-size: 8px;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -755,7 +756,7 @@ summary::-webkit-details-marker { display: none; }
   color: var(--gold-dark);
   background: transparent;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 800;
 }
 .review-overview-card > button span { display: inline-block; margin-left: 7px; transition: transform .18s ease; }
