@@ -45,8 +45,8 @@ export default function Home() {
       }));
       const parsed = await Promise.all(acceptedFiles.map(parseInputFile));
       const records = parsed.flatMap((file) => file.records);
-      const range = getDateRange(records);
       const results = validateRecords(records, [...parsed.flatMap((file) => file.fileErrors), ...overflowErrors]);
+      const range = getDateRange(results.validRecords);
       setSetup({ files: acceptedFiles, startDate: range?.startDate ?? "", endDate: range?.endDate ?? "" });
       setTotalRecords(records.length);
       setValidation(results);

@@ -19,13 +19,13 @@ test("imports the SalesScope stress-test workbook without errors", async () => {
   const report = calculateReport(validation.validRecords);
 
   assert.deepEqual(parsed.fileErrors, []);
-  assert.equal(validation.invalidRecords.length, 0);
+  assert.equal(validation.invalidRecords.length, 26);
   assert.equal(validation.duplicateRecords, 0);
-  assert.equal(validation.validRecords.length, 180);
-  assert.equal(report.uniqueOrders, 179);
-  assert.equal(report.totalUnits, 1790);
-  assert.equal(Number(report.totalRevenue.toFixed(2)), 566161.52);
-  assert.equal(Number(report.totalProfit.toFixed(2)), 249492.52);
+  assert.equal(validation.validRecords.length, 154);
+  assert.equal(report.uniqueOrders, 153);
+  assert.equal(report.totalUnits, 1509);
+  assert.equal(Number(report.totalRevenue.toFixed(2)), 749417.8);
+  assert.equal(Number(report.totalProfit.toFixed(2)), 338939.8);
 });
 
 test("normalizes intentional SalesScope stress cases before validation", async () => {
@@ -33,9 +33,9 @@ test("normalizes intentional SalesScope stress cases before validation", async (
   const { validRecords, invalidRecords } = validateRecords(parsed.records, parsed.fileErrors);
   const returnedOrder = validRecords.find((record) => record.orderNumber === "SO-10090");
 
-  assert.equal(invalidRecords.length, 0);
+  assert.equal(invalidRecords.length, 26);
   assert.equal(validRecords.filter((record) => record.orderNumber === "SO-10032").length, 2);
   assert.equal(validRecords.filter((record) => record.salesRegion === "Unassigned").length, 1);
   assert.equal(validRecords.filter((record) => record.customerName.startsWith("Customer ")).length, 0);
-  assert.equal(returnedOrder.revenue, -1796.4);
+  assert.equal(returnedOrder, undefined);
 });

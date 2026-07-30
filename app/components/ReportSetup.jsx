@@ -75,10 +75,13 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   const invalidShipDates = records.filter((record) => record.shipDate && record.date && comparableDate(record.shipDate) < comparableDate(record.date)).length;
   const unprofitableRows = records.filter((record) => Number(record.profit) < 0).length;
   const highDiscountRows = records.filter((record) => Number(record.discount) >= 0.4).length;
+  const unknownRegions = validation?.dataWarnings?.filter((record) => record.error?.startsWith("Unknown sales region")).length ?? 0;
+  const unknownCategories = validation?.dataWarnings?.filter((record) => record.error?.startsWith("Unknown product category")).length ?? 0;
+  const optionalMeasureWarnings = validation?.dataWarnings?.length ?? 0;
   const qualityChecks = [
     ["Order and ship dates", invalidShipDates, invalidShipDates ? `${countLabel(invalidShipDates, "row")} has a ship date before its order date` : "No ship dates occur before order dates"],
-    ["Regions", 0, isSalesScopeImport ? "Region values are ready for reporting" : "All region values are present"],
-    ["Categories", 0, isSalesScopeImport ? "Category values are normalized during import" : "All category values are present"],
+    ["Regions", unknownRegions, unknownRegions ? `${countLabel(unknownRegions, "unknown value")} excluded` : `${validation?.normalizedRegions ?? 0} aliases normalized to HomePlus regions`],
+    ["Categories", unknownCategories, unknownCategories ? `${countLabel(unknownCategories, "unknown value")} excluded` : `${validation?.normalizedCategories ?? 0} aliases normalized to HomePlus categories`],
     ["Duplicate line items", validation?.duplicateRecords ?? 0, validation?.duplicateRecords ? `${countLabel(validation.duplicateRecords, "duplicate")} excluded from reporting` : isSalesScopeImport ? "Repeated order IDs are resolved during import" : "No repeated line-item identifiers were found"],
   ];
 
@@ -167,7 +170,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
           >
             <span className="upload-icon" aria-hidden="true">{isValidating ? "···" : filesReady ? "✓" : "⇧"}</span>
             <strong>{isDragging ? "Drop supported files here" : isValidating ? "Reading and validating…" : filesReady ? `${countLabel(files.length, "file")} ready` : "Choose sales files"}</strong>
-            <span>{filesReady ? "Drop more files or click to browse" : "Drag and drop, or browse CSV, Excel, JSON, TSV, or PDF"}</span>
+            <span>{filesReady ? "Drop more files or click to browse" : "Drag and drop, or browse CSV, Excel, JSON, TSV, or experimental table-based PDF"}</span>
             <input type="file" multiple accept=".csv,.xlsx,.xls,.xlsm,.ods,.json,.tsv,.tab,.psv,.txt,.dat,.pdf" onChange={(event) => { addSelectedFiles([...event.target.files]); event.currentTarget.value = ""; }} />
           </label>
           <div className="upload-support">
@@ -259,9 +262,10 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
                 <div className="validation-disclosure-body">
                 <p className="audit-explainer">These checks test relationships and business meaning across fields. Individual column completeness and format are covered in the Column guide.</p>
                 <ul>{qualityChecks.map(([label, count, detail]) => <li key={label}><span className={count ? "flag" : "pass"}>{count ? "!" : "✓"}</span><p><strong>{label}</strong><small>{detail}</small></p></li>)}</ul>
-                <div className="business-warnings">
+              <div className="business-warnings">
                   <p><strong>{unprofitableRows.toLocaleString()} unprofitable line items</strong><span>Valid business results to investigate—not file errors.</span></p>
                   <p><strong>{highDiscountRows.toLocaleString()} line items discounted 40%+</strong><span>Review their effect on sales and margin in the report.</span></p>
+                  <p><strong>{optionalMeasureWarnings.toLocaleString()} optional-value warnings</strong><span>Invalid profit or discount values are excluded from those analyses, never treated as zero.</span></p>
                 </div>
                 </div>
               </details>

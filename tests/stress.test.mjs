@@ -89,8 +89,8 @@ test("mutation matrix rejects bad values and keeps valid spelling variants", () 
   const { validation } = parseAndValidate([canonicalHeader, ...rows].join("\n"));
   const invalidRows = new Set(validation.invalidRecords.map((record) => record.rowNumber));
 
-  assert.equal(validation.validRecords.length, 3);
-  assert.deepEqual([...invalidRows].sort((a, b) => a - b), [3, 4, 5, 6, 7, 10]);
+  assert.equal(validation.validRecords.length, 2);
+  assert.deepEqual([...invalidRows].sort((a, b) => a - b), [3, 4, 5, 6, 7, 8, 10]);
   assert.equal(validation.duplicateRecords, 1);
 });
 
@@ -135,7 +135,7 @@ test("processes a 50,000-row CSV within a practical local budget", { timeout: 20
   assert.equal(parsed.records.length, 50_000);
   assert.equal(validation.validRecords.length, 50_000);
   assert.equal(validation.invalidRecords.length, 0);
-  assert.equal(report.uniqueOrders, 25_000);
+  assert.equal(report.uniqueOrders, 50_000);
   assert.ok(elapsedMs < 15_000, `50,000 rows took ${elapsedMs}ms`);
 });
 

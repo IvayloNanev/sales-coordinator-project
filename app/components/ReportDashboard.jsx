@@ -219,10 +219,13 @@ export default function ReportDashboard({ records, startDate, endDate, generated
   const visualsRef = useRef(null);
   const tabRefs = useRef([]);
   const hasMountedResults = useRef(false);
-  const defaultStart = startDate;
+  const completedDefault = previousCompletedWeek(endDate);
+  const hasCompletedWeek = completedDefault && completedDefault.startDate >= startDate && completedDefault.endDate <= endDate;
+  const defaultStart = hasCompletedWeek ? completedDefault.startDate : startDate;
+  const defaultEnd = hasCompletedWeek ? completedDefault.endDate : endDate;
   const [filters, setFilters] = useState({
     startDate: defaultStart,
-    endDate,
+    endDate: defaultEnd,
     region: "",
     category: "",
     segment: "",
@@ -279,8 +282,8 @@ export default function ReportDashboard({ records, startDate, endDate, generated
   }, [currentRecords, priorRecords, largestRegionalDecline]);
   const highestDiscountProducts = useMemo(
     () => report.products
-      .filter((product) => product.averageDiscount > 0)
-      .sort((a, b) => b.averageDiscount - a.averageDiscount || a.profit - b.profit)
+      .filter((product) => Number.isFinite(product.averageDiscount) && product.averageDiscount > 0)
+      .sort((a, b) => b.averageDiscount - a.averageDiscount || (a.profit ?? 0) - (b.profit ?? 0))
       .slice(0, 5),
     [report.products],
   );
@@ -311,7 +314,7 @@ export default function ReportDashboard({ records, startDate, endDate, generated
     });
   }, [endDate, startDate]);
   const activePeriod = Object.entries(presetRanges).find(([, range]) => range.startDate === filters.startDate && range.endDate === filters.endDate)?.[0] ?? "";
-  const filtersDirty = filters.startDate !== defaultStart || filters.endDate !== endDate || Boolean(filters.region || filters.category || filters.segment);
+  const filtersDirty = filters.startDate !== defaultStart || filters.endDate !== defaultEnd || Boolean(filters.region || filters.category || filters.segment);
   const activeFilterText = [
     `${shortDate(filters.startDate)} to ${shortDate(filters.endDate)}`,
     filters.region || "All regions",
@@ -358,7 +361,7 @@ export default function ReportDashboard({ records, startDate, endDate, generated
   }, [filters, orderQuery, view]);
   const money = (value) => formatCurrency(value);
   const updateFilter = (field, value) => setFilters((current) => ({ ...current, [field]: value }));
-  const resetFilters = () => setFilters({ startDate: defaultStart, endDate, region: "", category: "", segment: "" });
+  const resetFilters = () => setFilters({ startDate: defaultStart, endDate: defaultEnd, region: "", category: "", segment: "" });
   const applyPeriod = (period) => {
     const range = presetRanges[period];
     setFilters((current) => ({
@@ -392,9 +395,9 @@ export default function ReportDashboard({ records, startDate, endDate, generated
     URL.revokeObjectURL(url);
   };
   const views = {
-    regions: { label: "Regions", rows: report.regions, columns: [{ key: "salesRegion", label: "Region" }, { key: "orders", label: "Orders" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: money }, { key: "profitMargin", label: "Margin", render: (value) => `${value.toFixed(1)}%` }] },
-    categories: { label: "Categories", rows: report.categories, columns: [{ key: "productCategory", label: "Category" }, { key: "orders", label: "Orders" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: money }, { key: "profitMargin", label: "Margin", render: (value) => `${value.toFixed(1)}%` }] },
-    products: { label: "Products", rows: report.products, columns: [{ key: "product", label: "Product" }, { key: "productCategory", label: "Category" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: money }, { key: "averageDiscount", label: "Avg. discount", render: (value) => `${(value * 100).toFixed(1)}%` }] },
+    regions: { label: "Regions", rows: report.regions, columns: [{ key: "salesRegion", label: "Region" }, { key: "orders", label: "Orders" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: (value) => Number.isFinite(value) ? money(value) : "Unavailable" }, { key: "profitMargin", label: "Margin", render: (value) => Number.isFinite(value) ? `${value.toFixed(1)}%` : "Unavailable" }] },
+    categories: { label: "Categories", rows: report.categories, columns: [{ key: "productCategory", label: "Category" }, { key: "orders", label: "Orders" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: (value) => Number.isFinite(value) ? money(value) : "Unavailable" }, { key: "profitMargin", label: "Margin", render: (value) => Number.isFinite(value) ? `${value.toFixed(1)}%` : "Unavailable" }] },
+    products: { label: "Products", rows: report.products, columns: [{ key: "product", label: "Product" }, { key: "productCategory", label: "Category" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: (value) => Number.isFinite(value) ? money(value) : "Unavailable" }, { key: "averageDiscount", label: "Weighted discount", render: (value) => Number.isFinite(value) ? `${(value * 100).toFixed(1)}%` : "Unavailable" }] },
     orders: { label: "Orders", rows: visibleOrders, columns: [{ key: "orderNumber", label: "Order ID" }, { key: "date", label: "Date", render: shortDate }, { key: "customerId", label: "Customer ID" }, { key: "customerName", label: "Customer" }, { key: "salesRegion", label: "Region" }, { key: "products", label: "Products" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: money }] },
   };
 
@@ -441,16 +444,16 @@ export default function ReportDashboard({ records, startDate, endDate, generated
 
           <section className="analysis-panel discount-risk-panel" aria-labelledby="discount-risk-title">
             <div className="card-heading"><h5 id="discount-risk-title">Highest-discount products</h5><span>Margin effect</span></div>
-            <div className="compact-analysis-table"><table><thead><tr><th>Product</th><th>Avg. discount</th><th>Profit</th><th>Margin</th></tr></thead><tbody>{highestDiscountProducts.map((product) => <tr className={product.profit < 0 ? "risk-row" : ""} key={product.product}><td title={product.product}>{product.product}</td><td>{(product.averageDiscount * 100).toFixed(1)}%</td><td className={changeClass(product.profit)}>{money(product.profit)}</td><td className={changeClass(product.profitMargin)}>{product.profitMargin.toFixed(1)}%</td></tr>)}</tbody></table></div>
-            {!highestDiscountProducts.length && <p className="briefing-empty">No discounted products appear in this period.</p>}
+            <div className="compact-analysis-table"><table><thead><tr><th>Product</th><th>Weighted discount</th><th>Profit</th><th>Margin</th></tr></thead><tbody>{highestDiscountProducts.map((product) => <tr className={Number.isFinite(product.profit) && product.profit < 0 ? "risk-row" : ""} key={product.product}><td title={product.product}>{product.product}</td><td>{(product.averageDiscount * 100).toFixed(1)}%</td><td className={changeClass(product.profit)}>{Number.isFinite(product.profit) ? money(product.profit) : "Unavailable"}</td><td className={changeClass(product.profitMargin)}>{Number.isFinite(product.profitMargin) ? `${product.profitMargin.toFixed(1)}%` : "Unavailable"}</td></tr>)}</tbody></table></div>
+            {!highestDiscountProducts.length && <p className="briefing-empty">{report.discountAvailability === "available" ? "No discounted products appear in this period." : "Discount data unavailable or incomplete."}</p>}
           </section>
         </div>
       </section>
 
       <div className="metric-grid metric-grid-expanded">
         <MetricCard featured label="Sales" value={money(report.totalRevenue)} note={changeLabel(changes.revenue)} trend={changes.revenue} />
-        <MetricCard featured label="Profit" value={money(report.totalProfit)} note={`${changeLabel(changes.profit)} · ${report.profitMargin.toFixed(1)}% margin`} trend={changes.profit} />
-        <MetricCard label="Average discount" value={`${(report.averageDiscount * 100).toFixed(1)}%`} note="Across visible line items" />
+        <MetricCard featured label="Profit" value={report.profitAvailability === "available" ? money(report.totalProfit) : "Unavailable"} note={report.profitAvailability === "available" ? `${changeLabel(changes.profit)} · ${report.profitMargin.toFixed(1)}% margin` : report.profitAvailability === "partial" ? "Partial profit data; analysis withheld" : "Profit column not supplied"} trend={report.profitAvailability === "available" ? changes.profit : null} />
+        <MetricCard label="Weighted discount" value={report.discountAvailability === "available" ? `${(report.averageDiscount * 100).toFixed(1)}%` : "Unavailable"} note={report.discountAvailability === "available" ? "Weighted by visible sales" : report.discountAvailability === "partial" ? "Partial discount data" : "Discount column not supplied"} />
         <MetricCard label="Orders" value={report.uniqueOrders.toLocaleString()} note={changeLabel(changes.orders)} trend={changes.orders} />
         <MetricCard label="Units sold" value={report.totalUnits.toLocaleString()} note={changeLabel(changes.units)} trend={changes.units} />
         <MetricCard label="Average order" value={money(report.averageOrderValue)} note={`Median ${money(report.medianOrderValue)}`} />
@@ -472,6 +475,11 @@ export default function ReportDashboard({ records, startDate, endDate, generated
         </aside> : <aside className="driver-evidence positive-evidence"><span>Regional movement</span><strong>No region declined versus the prior period.</strong></aside>}
       </section>
 
+      <section className="breakdown-card discount-impact-summary" aria-labelledby="discount-impact-title">
+        <div className="breakdown-head"><div><h4 id="discount-impact-title">Discount impact</h4><small>Line-item groups; discount rate is weighted by sales.</small></div></div>
+        {report.discountAvailability === "available" ? <div className="compact-analysis-table"><table><thead><tr><th>Group</th><th>Sales</th><th>Orders</th><th>Units</th><th>Profit</th><th>Margin</th></tr></thead><tbody>{report.discountImpact.map((group) => <tr key={group.kind}><td>{group.kind === "discounted" ? "Discounted lines" : "Non-discounted lines"}</td><td>{money(group.sales)}</td><td>{group.orders.toLocaleString()}</td><td>{group.units.toLocaleString()}</td><td>{Number.isFinite(group.profit) ? money(group.profit) : "Unavailable"}</td><td>{Number.isFinite(group.profitMargin) ? `${group.profitMargin.toFixed(1)}%` : "Unavailable"}</td></tr>)}</tbody></table></div> : <p className="briefing-empty">{report.discountAvailability === "partial" ? "Discount data is only partially available, so the comparison is withheld." : "Discount data unavailable."}</p>}
+      </section>
+
       <section ref={visualsRef} className="report-visuals" aria-labelledby="visual-overview-title">
         <div className="visuals-heading">
           <div><p className="eyebrow">Performance at a glance</p><h4 id="visual-overview-title">Where the business is moving.</h4></div>
@@ -480,7 +488,7 @@ export default function ReportDashboard({ records, startDate, endDate, generated
         <div className={`visual-grid chart-reveal${visualsVisible ? " is-visible" : ""}`}>
           <VisualRanking title="Sales by category" eyebrow="Revenue mix" rows={report.categories} labelKey="productCategory" valueFormatter={money} />
           <VisualRanking title="Sales by region" eyebrow="Market strength" rows={report.regions} labelKey="salesRegion" valueFormatter={money} tone="amber" />
-          <VisualRanking title="Profit leaders" eyebrow="Margin contribution" rows={[...report.products].sort((a, b) => b.profit - a.profit)} labelKey="product" valueKey="profit" valueFormatter={money} tone="green" />
+          {report.profitAvailability === "available" ? <VisualRanking title="Profit leaders" eyebrow="Margin contribution" rows={[...report.products].filter((product) => Number.isFinite(product.profit) && product.profit > 0).sort((a, b) => b.profit - a.profit)} labelKey="product" valueKey="profit" valueFormatter={money} tone="green" /> : <article className="visual-card visual-card-green"><header><div><span>Margin contribution</span><h5>Profit leaders</h5></div></header><p className="briefing-empty">Profit data unavailable. No profit ranking was calculated.</p></article>}
           <MixWheel rows={report.categories} total={report.totalRevenue} money={money} />
         </div>
       </section>

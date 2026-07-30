@@ -39,7 +39,7 @@ test("keeps the first valid order and excludes later duplicates and invalid reco
   assert.equal(result.validRecords.length, 1);
   assert.equal(result.validRecords[0].rowNumber, 2);
   assert.ok(result.invalidRecords.some((record) => record.error === "Duplicate sales row; first valid occurrence kept"));
-  assert.ok(result.invalidRecords.some((record) => record.error === "Quantity must be a positive number"));
+  assert.ok(result.invalidRecords.some((record) => record.error === "Quantity must be a positive whole number"));
   assert.ok(result.invalidRecords.some((record) => record.error === "Missing sales region"));
 });
 
@@ -76,15 +76,15 @@ test("accepts SalesScope workbook-style headers without store columns", () => {
   const report = calculateReport(result.validRecords);
 
   assert.deepEqual(parsed.fileErrors, []);
-  assert.equal(result.validRecords.length, 4);
+  assert.equal(result.validRecords.length, 3);
   assert.equal(result.validRecords[0].customerName, "Ion Partners");
   assert.equal(report.orders.find((order) => order.orderNumber === "SO-10001").customerId, "CUST-859");
   assert.equal(result.validRecords[0].segment, "Small Business");
   assert.equal(report.orders.find((order) => order.orderNumber === "SO-10001").customerName, "Ion Partners");
   assert.equal(new SalesDataManager(result.validRecords).records[0].discount, 0.1);
-  assert.equal(result.validRecords[2].salesRegion, "Unassigned");
-  assert.equal(result.validRecords[3].customerName, "CUST-305");
-  assert.equal(Number(report.totalRevenue.toFixed(2)), 13449.47);
+  assert.equal(result.validRecords[1].salesRegion, "Unassigned");
+  assert.equal(result.validRecords[2].customerName, "CUST-305");
+  assert.equal(Number(report.totalRevenue.toFixed(2)), 17049.47);
 });
 
 test("uses city and state as a stable store fallback when postal code is blank", () => {
@@ -176,7 +176,7 @@ test("deduplicates line-item IDs case-insensitively while preserving repeated or
   assert.ok(result.invalidRecords.some((record) => record.error === "Duplicate line item; first valid occurrence kept"));
 });
 
-test("scopes line-item IDs to their source file", () => {
+test("deduplicates line-item IDs across source files", () => {
   const base = {
     date: "2026-07-06", storeId: "101", storeName: "Downtown", customerName: "Acme",
     product: "Desk", productCategory: "Furniture", salesRegion: "North",
@@ -187,8 +187,8 @@ test("scopes line-item IDs to their source file", () => {
     { ...base, sourceFile: "store-102.csv", orderNumber: "A-2", rowNumber: 2 },
   ]);
 
-  assert.equal(result.validRecords.length, 2);
-  assert.equal(result.duplicateRecords, 0);
+  assert.equal(result.validRecords.length, 1);
+  assert.equal(result.duplicateRecords, 1);
 });
 
 test("uses a customer ID when the customer name is missing", () => {
@@ -235,7 +235,7 @@ test("derives the reporting period from valid CSV dates", () => {
 
 test("exports cleaned records as a correctly escaped CSV", () => {
   const csv = recordsToCsv([{ date: "2026-07-06", storeId: "101", storeName: "Downtown", orderNumber: "A-1", customerName: "Smith, Jane", product: 'Chair "Plus"', productCategory: "Furniture", salesRegion: "North", quantitySold: 2, revenue: 800 }]);
-  assert.match(csv, /^Date,Store ID,Store name,Order number/);
+  assert.match(csv, /^Source file,Source row,Line-item ID,Order ID,Order date/);
   assert.match(csv, /"Smith, Jane"/);
   assert.match(csv, /"Chair ""Plus"""/);
 });
@@ -251,14 +251,14 @@ test("sample files produce the manually verified totals", async () => {
   assert.equal(result.duplicateRecords, 0);
   assert.equal(report.totalRevenue, 21740);
   assert.equal(report.totalUnits, 103);
-  assert.equal(report.uniqueOrders, 26);
-  assert.equal(report.averageOrderValue, 21740 / 26);
+  assert.equal(report.uniqueOrders, 27);
+  assert.equal(report.averageOrderValue, 21740 / 27);
   assert.equal(report.highestRevenueStore, "Westgate");
   assert.equal(report.highestRevenueRegion, "West");
   assert.equal(report.highestRevenueProduct, "Ergonomic Chair");
   assert.equal(report.topSellingProduct, "Wireless Mouse");
   assert.equal(report.customerCount, 27);
-  assert.equal(report.medianOrderValue, 665);
+  assert.equal(report.medianOrderValue, 600);
   assert.equal(report.activeDays, 5);
   assert.equal(report.dailyAverageRevenue, 4348);
   assert.equal(report.bestDay.date, "2026-07-06");
@@ -354,7 +354,7 @@ test("calculates profit metrics, prior periods, and performance drivers", () => 
 
   assert.equal(current.totalProfit, 30);
   assert.equal(current.profitMargin, 10);
-  assert.equal(current.averageDiscount, 0.2);
+  assert.equal(current.averageDiscount, 1 / 6);
   assert.equal(current.averageFulfillmentDays, 4);
   assert.equal(current.orders[0].profit, 40);
   assert.equal(current.orders[0].profitMargin, 20);
@@ -392,6 +392,30 @@ test("calculates profit metrics, prior periods, and performance drivers", () => 
     largestDecline: { label: "East", revenueChange: -75 },
     contributingDrivers: [{ label: "Chairs", revenueChange: -50 }],
   }), /largest drag was East.*Chairs/s);
+});
+
+test("preserves optional financial availability, normalizes aliases, and round-trips auditable exports", () => {
+  const base = { date: "2026-07-06", storeId: "101", storeName: "Downtown", customerName: "Acme", product: "=Desk", productCategory: "tech", salesRegion: " western ", quantitySold: "2", revenue: "200", sourceFile: "a.csv", rowNumber: 2, lineItemId: "L-1", orderNumber: "A-1" };
+  const validation = validateRecords([
+    { ...base, discount: "20%", profit: "40" },
+    { ...base, lineItemId: "L-2", orderNumber: "A-2", rowNumber: 3, discount: "", profit: "" },
+    { ...base, lineItemId: "L-3", orderNumber: "A-3", rowNumber: 4, discount: "20", profit: "garbage" },
+  ]);
+  assert.equal(validation.validRecords.length, 3);
+  assert.equal(validation.validRecords[0].salesRegion, "West");
+  assert.equal(validation.validRecords[0].productCategory, "Technology");
+  assert.equal(validation.dataWarnings.filter((warning) => ["profit", "discount"].includes(warning.field)).length, 2);
+  const report = calculateReport(validation.validRecords);
+  assert.equal(report.profitAvailability, "partial");
+  assert.equal(report.discountAvailability, "partial");
+  assert.equal(report.totalProfit, null);
+  assert.equal(report.profitMargin, null);
+  assert.equal(report.averageDiscount, null);
+  const csv = recordsToCsv(validation.validRecords);
+  assert.match(csv, /Profit status,Discount status/);
+  assert.match(csv, /'=Desk/);
+  const roundTrip = validateRecords(parseCsvText(csv, "export.csv").records);
+  assert.equal(calculateReport(roundTrip.validRecords).totalRevenue, report.totalRevenue);
 });
 
 test("accepts tabular JSON, TSV, and flags unreadable file formats", async () => {
