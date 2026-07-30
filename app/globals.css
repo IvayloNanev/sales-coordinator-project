@@ -1163,6 +1163,170 @@ tbody tr:last-child td { border-bottom: 0; }
 .restart-action small { max-width: 180px; color: var(--muted); font-size: 11px; line-height: 1.25; }
 .danger-action { color: var(--red) !important; }
 
+/* Restored editorial dashboard language: dimensional cards, visual data, and responsive motion. */
+.expanded-report {
+  background:
+    radial-gradient(circle at 91% 4%, rgba(214, 171, 76, .2), transparent 24%),
+    linear-gradient(155deg, rgba(255, 254, 249, .98), rgba(248, 239, 216, .9));
+  box-shadow: 0 28px 72px rgba(69, 47, 17, .18);
+}
+.expanded-report::after {
+  position: absolute;
+  z-index: -1;
+  inset: 10px;
+  border: 1px solid rgba(177, 138, 67, .18);
+  border-radius: calc(var(--card-radius) - 6px);
+  content: "";
+  pointer-events: none;
+}
+.metric-card,
+.analysis-panel,
+.breakdown-card,
+.visual-card {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(150, 108, 39, .24);
+  background: linear-gradient(145deg, rgba(255, 255, 252, .98), rgba(248, 235, 203, .72));
+  box-shadow: 0 12px 28px rgba(81, 54, 13, .09), inset 0 1px rgba(255, 255, 255, .9);
+  transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+}
+.metric-card::before,
+.analysis-panel::before,
+.visual-card::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, #d3a343, #8e6726);
+  content: "";
+}
+.metric-card:hover,
+.analysis-panel:hover,
+.visual-card:hover {
+  border-color: rgba(142, 103, 38, .48);
+  box-shadow: 0 18px 38px rgba(81, 54, 13, .15), inset 0 1px rgba(255, 255, 255, .96);
+  transform: translateY(-3px);
+}
+.metric-card.featured {
+  color: #fffaf0;
+  border-color: #815c20;
+  background:
+    radial-gradient(circle at 90% 10%, rgba(255, 226, 151, .2), transparent 35%),
+    linear-gradient(145deg, #8b6629, #5d4218);
+}
+.metric-card.featured::before { background: #e8c470; }
+.metric-card.featured > span,
+.metric-card.featured small { color: rgba(255, 250, 240, .78); }
+.metric-card.featured .positive { color: #e9d58c !important; }
+.metric-card.featured .negative { color: #ffd0c6 !important; }
+.report-visuals { margin-top: 18px; }
+.visuals-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 12px;
+  padding: 0 3px;
+}
+.visuals-heading h4 {
+  max-width: 700px;
+  margin: 2px 0 0;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: clamp(27px, 3.2vw, 43px);
+  letter-spacing: -.035em;
+  line-height: 1;
+}
+.visuals-heading > p {
+  max-width: 310px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: right;
+}
+.visual-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 11px;
+}
+.visual-card {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--card-radius);
+}
+.visual-card header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.visual-card header span {
+  color: var(--gold-dark);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.visual-card h5 {
+  margin: 3px 0 0;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 21px;
+  letter-spacing: -.025em;
+}
+.visual-card header > strong {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  color: #fffaf0;
+  border-radius: 50%;
+  background: var(--gold-dark);
+  font-size: 12px;
+}
+.visual-ranking { display: grid; gap: 13px; }
+.visual-rank > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+.visual-rank span {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.visual-rank strong {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+.visual-track {
+  overflow: hidden;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(161, 124, 53, .13);
+}
+.visual-track i {
+  display: block;
+  width: var(--bar-width);
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #79541d, #d8aa4b);
+  box-shadow: 0 0 12px rgba(177, 138, 67, .28);
+  transform-origin: left;
+  animation: report-bar-in .75s cubic-bezier(.2, .8, .2, 1) var(--bar-delay) both;
+}
+.visual-card-amber .visual-track i { background: linear-gradient(90deg, #a56624, #ecb35e); }
+.visual-card-green .visual-track i { background: linear-gradient(90deg, #426c55, #89ad82); }
+.visual-card-green::before { background: linear-gradient(180deg, #89ad82, #426c55); }
+@keyframes report-bar-in {
+  from { opacity: .25; transform: scaleX(.08); }
+  to { opacity: 1; transform: scaleX(1); }
+}
+
 @keyframes spin { to { transform: rotate(360deg); } }
 .site-footer {
   display: flex;
@@ -1191,6 +1355,8 @@ tbody tr:last-child td { border-bottom: 0; }
   .briefing-grid { grid-template-columns: 1fr 1fr; }
   .discount-risk-panel { grid-column: 1 / -1; }
   .metric-grid { grid-template-columns: repeat(3, 1fr); }
+  .visual-grid { grid-template-columns: 1fr 1fr; }
+  .visual-card:last-child { grid-column: 1 / -1; }
   .report-filter-panel { grid-template-columns: repeat(3, 1fr); }
 }
 
@@ -1240,6 +1406,10 @@ tbody tr:last-child td { border-bottom: 0; }
   .discount-risk-panel { grid-column: auto; }
   .briefing-heading { align-items: flex-start; flex-direction: column; }
   .metric-grid { grid-template-columns: repeat(2, 1fr); }
+  .visuals-heading { align-items: start; flex-direction: column; }
+  .visuals-heading > p { max-width: 520px; text-align: left; }
+  .visual-grid { grid-template-columns: 1fr; }
+  .visual-card:last-child { grid-column: auto; }
   .breakdown-head { align-items: stretch; flex-direction: column; }
   .tabs { overflow-x: auto; }
   .tabs button { flex: 1 0 auto; }
@@ -1285,6 +1455,7 @@ tbody tr:last-child td { border-bottom: 0; }
   .flagged-errors li em { max-width: 100%; text-align: left; }
   .gold-date-popover { width: min(238px, calc(100vw - 48px)); }
   .metric-card { min-height: 100px; }
+  .visual-card { padding: 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

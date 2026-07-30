@@ -11,6 +11,28 @@ import {
 
 const MetricCard = ({ label, value, note, featured, trend }) => <article className={`metric-card${featured ? " featured" : ""}`}><span>{label}</span><strong>{value}</strong>{note && <small className={trend ? changeClass(trend.value) : ""}>{note}</small>}</article>;
 
+function VisualRanking({ title, eyebrow, rows, labelKey, valueKey = "revenue", valueFormatter, tone = "gold" }) {
+  const visibleRows = rows.slice(0, 5);
+  const peak = Math.max(...visibleRows.map((row) => Math.abs(row[valueKey]) || 0), 1);
+  return (
+    <article className={`visual-card visual-card-${tone}`}>
+      <header><div><span>{eyebrow}</span><h5>{title}</h5></div><strong>{visibleRows.length}</strong></header>
+      <div className="visual-ranking">
+        {visibleRows.map((row, index) => {
+          const value = row[valueKey] || 0;
+          const width = Math.max((Math.abs(value) / peak) * 100, 4);
+          return (
+            <div className="visual-rank" key={row[labelKey]}>
+              <div><span>{row[labelKey]}</span><strong>{valueFormatter(value, row)}</strong></div>
+              <div className="visual-track" aria-hidden="true"><i style={{ "--bar-width": `${width}%`, "--bar-delay": `${index * 80}ms` }} /></div>
+            </div>
+          );
+        })}
+      </div>
+    </article>
+  );
+}
+
 function DataTable({ columns, rows, label }) {
   return <div className="table-wrap"><table><caption className="sr-only">{label} sales breakdown</caption><thead><tr>{columns.map((column) => <th scope="col" key={column.key}>{column.label}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={`${label}-${index}`}>{columns.map((column) => { const value = column.render ? column.render(row[column.key], row) : row[column.key]; return <td key={column.key} title={typeof value === "string" && value.length > 36 ? value : undefined}>{value}</td>; })}</tr>)}</tbody></table></div>;
 }
@@ -355,6 +377,18 @@ export default function ReportDashboard({ records, startDate, endDate, generated
         <MetricCard label="Units sold" value={report.totalUnits.toLocaleString()} note={changeLabel(changes.units)} trend={changes.units} />
         <MetricCard label="Average order" value={money(report.averageOrderValue)} note={`Median ${money(report.medianOrderValue)}`} />
       </div>
+
+      <section className="report-visuals" aria-labelledby="visual-overview-title">
+        <div className="visuals-heading">
+          <div><p className="eyebrow">Performance at a glance</p><h4 id="visual-overview-title">Where the business is moving.</h4></div>
+          <p>Relative contribution across the current filtered period.</p>
+        </div>
+        <div className="visual-grid">
+          <VisualRanking title="Sales by category" eyebrow="Revenue mix" rows={report.categories} labelKey="productCategory" valueFormatter={money} />
+          <VisualRanking title="Sales by region" eyebrow="Market strength" rows={report.regions} labelKey="salesRegion" valueFormatter={money} tone="amber" />
+          <VisualRanking title="Profit leaders" eyebrow="Margin contribution" rows={[...report.products].sort((a, b) => b.profit - a.profit)} labelKey="product" valueKey="profit" valueFormatter={money} tone="green" />
+        </div>
+      </section>
 
       <section className="breakdown-card expanded-breakdown">
         <div className="breakdown-head"><div><h4>Detail</h4><small>Review performance or trace an individual order.</small></div><div className="tabs" role="tablist" aria-label="Report breakdown">{Object.entries(views).map(([key, item], index) => <button id={`report-tab-${key}`} ref={(element) => { tabRefs.current[index] = element; }} type="button" role="tab" aria-controls={`report-panel-${key}`} aria-selected={view === key} tabIndex={view === key ? 0 : -1} className={view === key ? "active" : ""} onKeyDown={(event) => handleTabKeyDown(event, index)} onClick={() => setView(key)} key={key}>{item.label}</button>)}</div></div>
