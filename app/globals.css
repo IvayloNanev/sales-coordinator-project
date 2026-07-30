@@ -879,7 +879,7 @@ tbody tr:last-child td { border-bottom: 0; }
   align-items: center;
   justify-content: flex-end;
   gap: 28px;
-  margin: 26px var(--validation-gutter) 24px;
+  margin: 42px var(--validation-gutter) 24px;
   padding: 22px;
   border: 1px solid rgba(177, 138, 67, .33);
   border-radius: var(--card-radius);
