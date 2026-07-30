@@ -59,6 +59,8 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   const [kaggleError, setKaggleError] = useState("");
   const [isSourceEditing, setIsSourceEditing] = useState(false);
   const [isBuildingReport, setIsBuildingReport] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState([]);
+  const [isProcessingValidation, setIsProcessingValidation] = useState(false);
   const validationTitleRef = useRef(null);
   const reviewVisible = Boolean(validation && !isValidating);
   const filesReady = files.length > 0;
@@ -107,22 +109,40 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
     window.setTimeout(onProduceResults, 520);
   };
 
-  const addSelectedFiles = async (incoming) => {
+  const processSelectedFiles = async (incoming, replaceCurrent = isSourceEditing) => {
+    if (!incoming.length || isProcessingValidation) return;
     const scrollTop = window.scrollY;
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
-    await (isSourceEditing ? onReplaceFiles(incoming) : onFiles(incoming));
-    setIsSourceEditing(false);
-    requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo({ top: scrollTop, behavior: "auto" })));
+    setIsProcessingValidation(true);
+    try {
+      await new Promise((resolve) => window.setTimeout(resolve, 180));
+      await (replaceCurrent ? onReplaceFiles(incoming) : onFiles(incoming));
+      setPendingFiles([]);
+      setIsSourceEditing(false);
+      requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo({ top: scrollTop, behavior: "auto" })));
+    } finally {
+      setIsProcessingValidation(false);
+    }
+  };
+
+  const stageSelectedFiles = (incoming) => {
+    const selected = incoming.filter((file) => file?.name);
+    if (!selected.length) return;
+    setPendingFiles((current) => {
+      const base = isSourceEditing ? [] : current;
+      return [...base, ...selected.filter((file) => !base.some((existing) => existing.name === file.name && existing.size === file.size))];
+    });
   };
 
   const handleDrop = (event) => {
     event.preventDefault();
     setIsDragging(false);
-    addSelectedFiles([...event.dataTransfer.files]);
+    stageSelectedFiles([...event.dataTransfer.files]);
   };
 
   const loadKaggleDataset = async () => {
     setIsLoadingKaggle(true);
+    setIsProcessingValidation(true);
     setKaggleError("");
     try {
       const response = await fetch("/sample-files/sample-superstore.csv");
@@ -132,17 +152,21 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
         "kaggle-superstore.csv",
         { type: "text/csv" },
       );
-      await addSelectedFiles([dataset]);
+      await new Promise((resolve) => window.setTimeout(resolve, 180));
+      await (isSourceEditing ? onReplaceFiles([dataset]) : onFiles([dataset]));
+      setPendingFiles([]);
+      setIsSourceEditing(false);
     } catch (error) {
       setKaggleError(error instanceof Error ? error.message : "Unable to load the Kaggle dataset");
     } finally {
       setIsLoadingKaggle(false);
+      setIsProcessingValidation(false);
     }
   };
 
   return (
     <div
-      className={`intake-layout${reviewVisible ? " has-review" : ""}${isDragging ? " page-dragging" : ""}${isBuildingReport ? " report-transitioning" : ""}`}
+      className={`intake-layout${reviewVisible ? " has-review" : ""}${isDragging ? " page-dragging" : ""}${isBuildingReport ? " report-transitioning" : ""}${isProcessingValidation ? " validation-processing" : ""}`}
       onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }}
       onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; setIsDragging(true); }}
       onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setIsDragging(false); }}
@@ -156,29 +180,31 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
               <h1 id="files-title">{countLabel(files.length, "file")} validated and ready</h1>
               <p>{totalRecords.toLocaleString()} rows checked · {formatPeriod(startDate, endDate)}</p>
             </div>
-            <button className="button secondary" type="button" onClick={() => setIsSourceEditing(true)}>Replace source files</button>
+            <button className="button secondary" type="button" onClick={() => { setPendingFiles([]); setIsSourceEditing(true); }}>Replace source files</button>
           </div>
         ) : <div className="intake-upload-content">
         <div className="intake-heading">
           <p className="issue-line">Sales file automation</p>
-          <h1 id="files-title">Turn sales files into <em>validated weekly reports.</em></h1>
+          <h1 id="files-title">Turn sales <span className="headline-files">files</span> into <em>validated weekly reports.</em></h1>
           <p>Validate an export, catch reporting issues, and prepare Marcus’s manager-ready weekly numbers.</p>
         </div>
         <div className="upload-workspace">
-          <label
-            className={`drop-zone hero-drop-zone${isDragging ? " dragging" : ""}${filesReady ? " has-files" : ""}`}
-          >
-            <span className="upload-icon" aria-hidden="true">{isValidating ? "···" : filesReady ? "✓" : "⇧"}</span>
-            <strong>{isDragging ? "Drop supported files here" : isValidating ? "Reading and validating…" : filesReady ? `${countLabel(files.length, "file")} ready` : "Choose sales files"}</strong>
-            <span>{filesReady ? "Drop more files or click to browse" : "Drag and drop, or browse CSV, Excel, JSON, TSV, or experimental table-based PDF"}</span>
-            <input type="file" multiple accept=".csv,.xlsx,.xls,.xlsm,.ods,.json,.tsv,.tab,.psv,.txt,.dat,.pdf" onChange={(event) => { addSelectedFiles([...event.target.files]); event.currentTarget.value = ""; }} />
-          </label>
+          <div className="manual-upload-column">
+            <label
+              className={`drop-zone hero-drop-zone${isDragging ? " dragging" : ""}${pendingFiles.length ? " has-files" : ""}`}
+            >
+              <span className="upload-icon" aria-hidden="true">{pendingFiles.length ? "✓" : "⇧"}</span>
+              <strong>{isDragging ? "Drop supported files here" : pendingFiles.length ? `${countLabel(pendingFiles.length, "file")} selected` : "Choose sales files"}</strong>
+              <span>{pendingFiles.length ? pendingFiles.map((file) => file.name).join(", ") : "Drag and drop, or browse CSV, Excel, JSON, TSV, or experimental table-based PDF"}</span>
+              <input type="file" multiple accept=".csv,.xlsx,.xls,.xlsm,.ods,.json,.tsv,.tab,.psv,.txt,.dat,.pdf" onChange={(event) => { stageSelectedFiles([...event.target.files]); event.currentTarget.value = ""; }} />
+            </label>
+            {pendingFiles.length > 0 && <button className="button primary validate-files-button" type="button" onClick={() => processSelectedFiles(pendingFiles)}>Validate data<span aria-hidden="true">→</span></button>}
+          </div>
           <div className="upload-support">
             <div className="sample-callout kaggle-callout">
               <div>
                 <span className="section-number">Need a sample?</span>
                 <strong>Use the verified Superstore dataset</strong>
-                <p>Loads 9,994 order lines with sales, discounts, and profit.</p>
                 {kaggleError && <p className="kaggle-error" role="alert">{kaggleError}</p>}
               </div>
               <div className="sample-actions">
@@ -188,23 +214,12 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
                 <a href="https://www.kaggle.com/datasets/vivek468/superstore-dataset-final" target="_blank" rel="noreferrer" aria-label="View the Superstore dataset on Kaggle">Source</a>
               </div>
             </div>
-            <section className="file-guidance" aria-labelledby="file-guidance-title">
-              <div className="file-guidance-head">
-                <div><p className="section-number">File requirements</p><h2 id="file-guidance-title">What Marcus needs</h2></div>
-              </div>
-              <p><strong>Best formats:</strong> CSV or Excel exports.</p>
-              <details>
-                <summary>View the 11 reporting fields</summary>
-                <ul>
-                  {["Order date", "Order ID", "Customer", "Segment", "Product", "Category", "Region", "Quantity", "Sales", "Discount", "Profit"].map((column) => <li key={column}>{column}</li>)}
-                </ul>
-              </details>
-            </section>
           </div>
         </div>
         </div>}
         {isValidating && <div className="local-processing-status" role="status"><span aria-hidden="true" />Reading dates and checking every row…</div>}
       </section>
+      {isProcessingValidation && <div className="validation-processing-overlay" role="status" aria-live="assertive"><span aria-hidden="true" /><strong>Validation is being processed</strong><small>Checking dates, columns, and every sales row…</small></div>}
 
       {reviewVisible && <aside className={`intake-status incoming-audit${isBuildingReport ? " report-transitioning" : ""}`} aria-label="Automatic incoming data review">
           <section className={`data-review-card panel${flaggedRows ? " has-errors" : " all-clear"}`} aria-labelledby="data-review-title">

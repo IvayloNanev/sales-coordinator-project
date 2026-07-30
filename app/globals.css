@@ -223,6 +223,13 @@ summary::-webkit-details-marker { display: none; }
   text-decoration-thickness: 2px;
   text-underline-offset: .12em;
 }
+.headline-files {
+  display: inline-block;
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: .82em;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
 .intake-heading > p:last-child {
   max-width: 680px;
   margin: 0 auto;
@@ -236,6 +243,8 @@ summary::-webkit-details-marker { display: none; }
   max-width: 980px;
   margin: 0 auto;
 }
+.manual-upload-column { display: grid; min-width: 0; gap: 12px; }
+.validate-files-button { width: 100%; min-height: 48px; }
 .hero-drop-zone {
   display: grid;
   min-height: 284px;
@@ -308,6 +317,39 @@ summary::-webkit-details-marker { display: none; }
 .sample-actions button:hover:not(:disabled) { background: #4a423d; }
 .sample-actions a:hover { background: #fffdf7; }
 .kaggle-error { color: var(--red) !important; }
+.validation-processing > :not(.validation-processing-overlay) {
+  filter: blur(7px);
+  opacity: .35;
+  pointer-events: none;
+  transform: scale(.992);
+  user-select: none;
+}
+.validation-processing-overlay {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 24px;
+  color: #fffaf0;
+  text-align: center;
+  background: rgba(41, 36, 33, .24);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+}
+.validation-processing-overlay > span {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 8px;
+  border: 3px solid rgba(255, 250, 240, .3);
+  border-top-color: var(--gold-light);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+.validation-processing-overlay strong { font-family: "Playfair Display", Georgia, serif; font-size: clamp(26px, 4vw, 40px); }
+.validation-processing-overlay small { color: rgba(255, 250, 240, .82); font-size: 14px; }
 .file-guidance-head h2 { margin: 0; font-family: "Playfair Display", Georgia, serif; font-size: 22px; }
 .file-guidance details { margin-top: 12px; }
 .file-guidance summary {
