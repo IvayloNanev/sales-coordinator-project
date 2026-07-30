@@ -64,6 +64,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   const [isProcessingValidation, setIsProcessingValidation] = useState(false);
   const [activeReviewPanel, setActiveReviewPanel] = useState("");
   const [cardsSequenceComplete, setCardsSequenceComplete] = useState(false);
+  const [uploadMotionReady, setUploadMotionReady] = useState(false);
   const reviewVisible = Boolean(validation && !isValidating);
   const validationTitleRef = useRef(null);
   const reviewDialogRef = useRef(null);
@@ -92,6 +93,17 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
     ["Categories", unknownCategories, unknownCategories ? `${countLabel(unknownCategories, "unknown value")} excluded` : `${validation?.normalizedCategories ?? 0} aliases normalized to HomePlus categories`],
     ["Duplicate line items", validation?.duplicateRecords ?? 0, validation?.duplicateRecords ? `${countLabel(validation.duplicateRecords, "duplicate")} excluded from reporting` : isSalesScopeImport ? "Repeated order IDs are resolved during import" : "No repeated line-item identifiers were found"],
   ];
+
+  useEffect(() => {
+    let secondFrame;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => setUploadMotionReady(true));
+    });
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+    };
+  }, []);
 
   useEffect(() => {
     if (!reviewVisible) return;
@@ -181,7 +193,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
 
   return (
     <div
-      className={`intake-layout${reviewVisible ? " has-review" : ""}${isDragging ? " page-dragging" : ""}${isBuildingReport ? " report-transitioning" : ""}${isProcessingValidation ? " validation-processing" : ""}`}
+      className={`intake-layout${reviewVisible ? " has-review" : ""}${uploadMotionReady ? " upload-motion-ready" : ""}${isDragging ? " page-dragging" : ""}${isBuildingReport ? " report-transitioning" : ""}${isProcessingValidation ? " validation-processing" : ""}`}
       onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }}
       onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; setIsDragging(true); }}
       onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setIsDragging(false); }}
