@@ -139,7 +139,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
 
   return (
     <div
-      className={`intake-layout${reviewVisible ? " has-review" : ""}${isDragging ? " page-dragging" : ""}`}
+      className={`intake-layout${reviewVisible ? " has-review" : ""}${isDragging ? " page-dragging" : ""}${isBuildingReport ? " report-transitioning" : ""}`}
       onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }}
       onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; setIsDragging(true); }}
       onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setIsDragging(false); }}

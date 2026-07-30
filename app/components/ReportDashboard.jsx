@@ -214,7 +214,9 @@ export default function ReportDashboard({ records, startDate, endDate, generated
   const [view, setView] = useState("regions");
   const [orderQuery, setOrderQuery] = useState("");
   const [resultsUpdating, setResultsUpdating] = useState(false);
+  const [visualsVisible, setVisualsVisible] = useState(false);
   const reportTitleRef = useRef(null);
+  const visualsRef = useRef(null);
   const tabRefs = useRef([]);
   const hasMountedResults = useRef(false);
   const defaultStart = startDate;
@@ -326,6 +328,23 @@ export default function ReportDashboard({ records, startDate, endDate, generated
 
   useEffect(() => {
     reportTitleRef.current?.focus({ preventScroll: true });
+  }, []);
+
+  useEffect(() => {
+    const section = visualsRef.current;
+    if (!section) return undefined;
+    if (!("IntersectionObserver" in window)) {
+      setVisualsVisible(true);
+      return undefined;
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setVisualsVisible(true);
+        observer.disconnect();
+      }
+    }, { threshold: 0.18 });
+    observer.observe(section);
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -453,12 +472,12 @@ export default function ReportDashboard({ records, startDate, endDate, generated
         </aside> : <aside className="driver-evidence positive-evidence"><span>Regional movement</span><strong>No region declined versus the prior period.</strong></aside>}
       </section>
 
-      <section className="report-visuals" aria-labelledby="visual-overview-title">
+      <section ref={visualsRef} className="report-visuals" aria-labelledby="visual-overview-title">
         <div className="visuals-heading">
           <div><p className="eyebrow">Performance at a glance</p><h4 id="visual-overview-title">Where the business is moving.</h4></div>
           <p>Relative contribution across the current filtered period.</p>
         </div>
-        <div className="visual-grid chart-reveal is-visible">
+        <div className={`visual-grid chart-reveal${visualsVisible ? " is-visible" : ""}`}>
           <VisualRanking title="Sales by category" eyebrow="Revenue mix" rows={report.categories} labelKey="productCategory" valueFormatter={money} />
           <VisualRanking title="Sales by region" eyebrow="Market strength" rows={report.regions} labelKey="salesRegion" valueFormatter={money} tone="amber" />
           <VisualRanking title="Profit leaders" eyebrow="Margin contribution" rows={[...report.products].sort((a, b) => b.profit - a.profit)} labelKey="product" valueKey="profit" valueFormatter={money} tone="green" />
