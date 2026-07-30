@@ -586,6 +586,11 @@ summary::-webkit-details-marker { display: none; }
 .button.primary:hover:not(:disabled) span[aria-hidden="true"] { transform: translateX(3px); }
 .button.secondary,
 .button.ghost { color: var(--gold-dark); background: rgba(255, 253, 247, .72); }
+.button.compact-button {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 12px;
+}
 .validation-primary-action { min-width: 184px; }
 .validation-download-action { white-space: nowrap; }
 
@@ -873,9 +878,9 @@ tbody tr:last-child td { border-bottom: 0; }
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 10px;
-  margin: 18px var(--validation-gutter) 22px;
-  padding: 18px;
+  gap: 28px;
+  margin: 26px var(--validation-gutter) 24px;
+  padding: 22px;
   border: 1px solid rgba(177, 138, 67, .33);
   border-radius: var(--card-radius);
   background: linear-gradient(145deg, #fffdf7, #f3e7c8);
@@ -884,7 +889,8 @@ tbody tr:last-child td { border-bottom: 0; }
   min-width: 0;
   margin: 0 auto 0 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
+  line-height: 1.55;
   overflow-wrap: anywhere;
 }
 .disabled-hint { padding: 0 var(--validation-gutter) 20px; color: var(--red); font-size: 13px; overflow-wrap: anywhere; }

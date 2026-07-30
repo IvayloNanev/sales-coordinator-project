@@ -236,7 +236,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
                 <p><span>Errors</span><strong className={flaggedRows ? "negative" : ""}>{flaggedRows.toLocaleString()}</strong></p>
                 <p><span>Date coverage</span><strong>{formatPeriod(startDate, endDate)}</strong></p>
               </div>
-              <button className="button secondary validation-download-action no-print" type="button" onClick={downloadValidationResults}>Download validation results</button>
+              <button className="button secondary compact-button validation-download-action no-print" type="button" onClick={downloadValidationResults}>Download validation results</button>
             </section>
 
             <details className="validation-disclosure source-file-summary">
