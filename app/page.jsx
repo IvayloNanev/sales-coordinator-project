@@ -94,7 +94,7 @@ export default function Home() {
   const navigate = (destination) => {
     if (destination === "results" && !resultsReady) return;
     if (destination === "results" && !generatedDate) {
-      setGeneratedDate(new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date()));
+      setGeneratedDate(new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date()));
     }
     setPage(destination);
   };

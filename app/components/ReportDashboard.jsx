@@ -3,7 +3,6 @@ import {
   calculateReport,
   comparisonDrivers,
   formatCurrency,
-  generateSummary,
   performanceChange,
   previousCompletedWeek,
   previousPeriod,
@@ -13,6 +12,37 @@ import {
 import useChartReveal from "../hooks/useChartReveal";
 
 const MetricCard = ({ label, value, note, featured, trend, onAnimationEnd }) => <article className={`metric-card${featured ? " featured" : ""}`} onAnimationEnd={onAnimationEnd}><span>{label}</span><strong>{value}</strong>{note && <small className={trend ? changeClass(trend.value) : ""}>{note}</small>}</article>;
+
+function RegionTrendSmallMultiples({ trends }) {
+  if (!trends.length || trends.every((trend) => trend.weeks.length < 2)) return <p className="briefing-empty">Not enough weekly history is available for a regional trend.</p>;
+  return (
+    <div className="region-trend-grid">{trends.map((trend) => {
+      const values = trend.weeks.map((week) => week.sales);
+      const width = 300;
+      const height = 86;
+      const padding = 8;
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const spread = Math.max(1, max - min);
+      const points = trend.weeks.map((week, index) => ({ ...week, x: padding + (index / Math.max(1, trend.weeks.length - 1)) * (width - padding * 2), y: height - padding - ((week.sales - min) / spread) * (height - padding * 2) }));
+      const latest = trend.weeks.at(-1);
+      const prior = trend.weeks.at(-2);
+      const change = latest.sales - prior.sales;
+      const percentage = prior.sales ? (change / Math.abs(prior.sales)) * 100 : null;
+      return <article className={`region-trend-card ${changeClass(change)}`} key={trend.region}><header><div><strong>{trend.region}</strong><small>8-week sales trend</small></div><span>{change > 0 ? "↑ Up" : change < 0 ? "↓ Down" : "— Flat"} {percentage === null ? "" : `${Math.abs(percentage).toFixed(1)}%`}</span></header><svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${trend.region} weekly sales trend ending at ${formatCurrency(latest.sales)}`}><line x1={padding} y1={height / 2} x2={width - padding} y2={height / 2} className="region-trend-guide" /><polyline points={points.map((point) => `${point.x},${point.y}`).join(" ")} className="region-trend-line" /><circle cx={points.at(-2).x} cy={points.at(-2).y} r="4" className="region-trend-prior-point" /><circle cx={points.at(-1).x} cy={points.at(-1).y} r="5" className="region-trend-current-point" />{points.map((point) => <title key={point.startDate}>{`${point.startDate} to ${point.endDate}: ${formatCurrency(point.sales)}`}</title>)}</svg><footer><span>{trend.weeks[0].label}</span><strong>{formatCurrency(latest.sales)} reported week</strong><span>{latest.label}</span></footer></article>;
+    })}</div>
+  );
+}
+
+function DiscountMarginCards({ products }) {
+  if (!products.length) return <p className="briefing-empty">Discount and margin data are unavailable for this period.</p>;
+  return (
+    <div className="discount-impact-list">{products.map((product, index) => {
+      const isRisk = product.profitMargin < 0;
+      return <article className={`discount-impact-item${isRisk ? " is-risk" : " is-positive"}`} key={product.product}><span className="risk-rank">{index + 1}</span><div className="discount-product"><strong>{product.product}</strong><small>{(product.averageDiscount * 100).toFixed(1)}% weighted discount</small></div><div className="discount-margin"><strong>{product.profitMargin.toFixed(1)}% margin</strong><small>{formatCurrency(product.profit)} profit</small></div><b className="margin-verdict">{isRisk ? "Hurting margin" : "Margin remains positive"}</b></article>;
+    })}</div>
+  );
+}
 
 function SalesTrend({ days, money }) {
   if (days.length < 2) return null;
@@ -40,54 +70,6 @@ function SalesTrend({ days, money }) {
   );
 }
 
-function VisualRanking({ title, eyebrow, rows, labelKey, valueKey = "revenue", valueFormatter, tone = "gold" }) {
-  const visibleRows = rows.slice(0, 5);
-  const peak = Math.max(...visibleRows.map((row) => Math.abs(row[valueKey]) || 0), 1);
-  return (
-    <article className={`visual-card visual-card-${tone}`}>
-      <header><div><span>{eyebrow}</span><h5>{title}</h5></div><strong>{visibleRows.length}</strong></header>
-      <div className="visual-ranking">
-        {visibleRows.map((row, index) => {
-          const value = row[valueKey] || 0;
-          const width = Math.max((Math.abs(value) / peak) * 100, 4);
-          return (
-            <div className="visual-rank" key={row[labelKey]}>
-              <div><span>{row[labelKey]}</span><strong>{valueFormatter(value, row)}</strong></div>
-              <div className="visual-track" aria-hidden="true"><i style={{ "--bar-width": `${width}%`, "--bar-delay": `${index * 80}ms` }} /></div>
-            </div>
-          );
-        })}
-      </div>
-    </article>
-  );
-}
-
-function MixWheel({ rows, total, money }) {
-  const palette = ["#6f4c19", "#b18135", "#dfbd70", "#8a7353"];
-  const compactMoney = (value) => new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    notation: "compact",
-    maximumFractionDigits: 1,
-  }).format(value);
-  const segments = rows.slice(0, 4).reduce((result, row, index) => {
-    const share = total ? (row.revenue / total) * 100 : 0;
-    const start = result.at(-1)?.end ?? 0;
-    result.push({ ...row, share, start, end: start + share, color: palette[index] });
-    return result;
-  }, []);
-  const gradient = segments.map((segment) => `${segment.color} ${segment.start}% ${segment.end}%`).join(", ");
-  return (
-    <article className="visual-card mix-wheel-card">
-      <header><div><span>Portfolio balance</span><h5>Category mix</h5></div><strong>{segments.length}</strong></header>
-      <div className="mix-wheel-layout">
-        <div className="mix-wheel" style={{ "--mix-gradient": `conic-gradient(${gradient || "#d7c9aa 0 100%"})` }}><span><strong title={money(total)}>{compactMoney(total)}</strong><small>Total sales</small></span></div>
-        <ul>{segments.map((segment) => <li key={segment.productCategory}><i style={{ background: segment.color }} /><span>{segment.productCategory}</span><b>{segment.share.toFixed(1)}%</b></li>)}</ul>
-      </div>
-    </article>
-  );
-}
-
 function DataTable({ columns, rows, label }) {
   return <div className="table-wrap"><table><caption className="sr-only">{label} sales breakdown</caption><thead><tr>{columns.map((column) => <th scope="col" key={column.key}>{column.label}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={`${label}-${index}`}>{columns.map((column) => { const value = column.render ? column.render(row[column.key], row) : row[column.key]; return <td key={column.key} title={typeof value === "string" && value.length > 36 ? value : undefined}>{value}</td>; })}</tr>)}</tbody></table></div>;
 }
@@ -104,13 +86,6 @@ const shiftDate = (value, days) => {
   const date = new Date(`${value}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
-};
-const calendarMonthRange = (value, offset = 0) => {
-  const date = new Date(`${value}T00:00:00Z`);
-  date.setUTCMonth(date.getUTCMonth() + offset, 1);
-  const startDate = date.toISOString().slice(0, 10);
-  date.setUTCMonth(date.getUTCMonth() + 1, 0);
-  return { startDate, endDate: date.toISOString().slice(0, 10) };
 };
 const changeLabel = (change) => {
   if (change.percentage === null) return change.value ? "New vs prior" : "No prior activity";
@@ -255,17 +230,18 @@ function GoldDateInput({ id, label, value, min, max, onChange }) {
 }
 
 export default function ReportDashboard({ records, startDate, endDate, generatedDate, fileCount, onRestart }) {
-  const [view, setView] = useState("regions");
+  const [view, setView] = useState("orders");
   const [orderQuery, setOrderQuery] = useState("");
   const [resultsUpdating, setResultsUpdating] = useState(false);
-  const [visualsVisible, setVisualsVisible] = useState(false);
-  const [metricsSequenceComplete, setMetricsSequenceComplete] = useState(false);
+  const [customDatesOpen, setCustomDatesOpen] = useState(false);
+  const [salesQuestion, setSalesQuestion] = useState("");
+  const [salesAnswer, setSalesAnswer] = useState(null);
   const reportTitleRef = useRef(null);
-  const visualsRef = useRef(null);
   const briefingRevealRef = useChartReveal(true, { threshold: 0.06, rootMargin: "0px 0px 24% 0px" });
   const metricsRevealRef = useChartReveal(true, { threshold: 0.06, rootMargin: "0px 0px 24% 0px" });
-  const managerSummaryRevealRef = useChartReveal(metricsSequenceComplete, { threshold: 0.05, rootMargin: "0px 0px 22% 0px" });
+  const managerSummaryRevealRef = useChartReveal(true, { threshold: 0.12, rootMargin: "0px 0px 8% 0px" });
   const actionableInsightsRevealRef = useChartReveal(true, { threshold: 0.12, rootMargin: "0px 0px 12% 0px" });
+  const orderDetailRef = useRef(null);
   const tabRefs = useRef([]);
   const hasMountedResults = useRef(false);
   const completedDefault = previousCompletedWeek(endDate);
@@ -285,6 +261,20 @@ export default function ReportDashboard({ records, startDate, endDate, generated
     categories: [...new Set(manager.records.map((record) => record.productCategory).filter(Boolean))].sort(),
     segments: [...new Set(manager.records.map((record) => record.segment).filter(Boolean))].sort(),
   }), [manager]);
+  const regionalWeeklyTrends = useMemo(() => {
+    const weeks = Array.from({ length: 8 }, (_, index) => {
+      const end = shiftDate(filters.endDate, -(7 - index) * 7);
+      return { startDate: shiftDate(end, -6), endDate: end, label: shortDate(end) };
+    }).filter((week) => week.endDate >= startDate);
+    const visibleRegions = filters.region ? [filters.region] : options.regions;
+    return visibleRegions.map((region) => ({
+      region,
+      weeks: weeks.map((week) => ({
+        ...week,
+        sales: manager.filterData({ region, category: filters.category, segment: filters.segment, startDate: week.startDate, endDate: week.endDate }).reduce((sum, record) => sum + record.revenue, 0),
+      })),
+    }));
+  }, [filters.category, filters.endDate, filters.region, filters.segment, manager, options.regions, startDate]);
   const currentRecords = useMemo(() => manager.filterData(filters), [manager, filters]);
   const report = useMemo(() => calculateReport(currentRecords), [currentRecords]);
   const priorRange = useMemo(() => previousPeriod(filters.startDate, filters.endDate), [filters.startDate, filters.endDate]);
@@ -311,37 +301,13 @@ export default function ReportDashboard({ records, startDate, endDate, generated
     () => new Map(categoryDrivers.map((driver) => [driver.label, driver.revenueChange])),
     [categoryDrivers],
   );
-  const regionChanges = useMemo(
-    () => new Map(regionDrivers.map((driver) => [driver.label, driver.revenueChange])),
-    [regionDrivers],
-  );
   const largestRegionalDecline = useMemo(
     () => regionDrivers.filter((driver) => driver.revenueChange < 0).sort((a, b) => a.revenueChange - b.revenueChange)[0] ?? null,
     [regionDrivers],
   );
-  const regionalContributors = useMemo(() => {
-    if (!largestRegionalDecline) return [];
-    const matchesRegion = (record) => record.salesRegion.trim().toLowerCase() === largestRegionalDecline.label.trim().toLowerCase();
-    return comparisonDrivers(
-      currentRecords.filter(matchesRegion),
-      priorRecords.filter(matchesRegion),
-      "product",
-      5,
-    );
-  }, [currentRecords, priorRecords, largestRegionalDecline]);
-  const regionalCategoryContributors = useMemo(() => {
-    if (!largestRegionalDecline) return [];
-    const matchesRegion = (record) => record.salesRegion.trim().toLowerCase() === largestRegionalDecline.label.trim().toLowerCase();
-    return comparisonDrivers(
-      currentRecords.filter(matchesRegion),
-      priorRecords.filter(matchesRegion),
-      "productCategory",
-      3,
-    );
-  }, [currentRecords, priorRecords, largestRegionalDecline]);
   const highestDiscountProducts = useMemo(
     () => report.products
-      .filter((product) => Number.isFinite(product.averageDiscount) && product.averageDiscount > 0)
+      .filter((product) => Number.isFinite(product.averageDiscount) && product.averageDiscount > 0 && Number.isFinite(product.profitMargin))
       .sort((a, b) => b.averageDiscount - a.averageDiscount || (a.profit ?? 0) - (b.profit ?? 0))
       .slice(0, 5),
     [report.products],
@@ -375,56 +341,36 @@ export default function ReportDashboard({ records, startDate, endDate, generated
       || order.salesRegion.toLowerCase().includes(query)
     ));
   }, [report.orders, orderQuery]);
-  const presetRanges = useMemo(() => {
-    const completedWeek = previousCompletedWeek(endDate);
-    const usableCompletedWeek = completedWeek && completedWeek.endDate >= startDate
-      ? { startDate: completedWeek.startDate < startDate ? startDate : completedWeek.startDate, endDate: completedWeek.endDate }
-      : { startDate: shiftDate(endDate, -6) < startDate ? startDate : shiftDate(endDate, -6), endDate };
-    return ({
-    week: usableCompletedWeek,
-    month: { startDate: calendarMonthRange(endDate).startDate < startDate ? startDate : calendarMonthRange(endDate).startDate, endDate },
-    "previous-month": {
-      startDate: calendarMonthRange(endDate, -1).startDate < startDate ? startDate : calendarMonthRange(endDate, -1).startDate,
-      endDate: calendarMonthRange(endDate, -1).endDate > endDate ? endDate : calendarMonthRange(endDate, -1).endDate,
-    },
-    all: { startDate, endDate },
-    });
-  }, [endDate, startDate]);
-  const activePeriod = Object.entries(presetRanges).find(([, range]) => range.startDate === filters.startDate && range.endDate === filters.endDate)?.[0] ?? "";
   const filtersDirty = filters.startDate !== defaultStart || filters.endDate !== defaultEnd || Boolean(filters.region || filters.category || filters.segment);
-  const activeFilterText = [
-    `${shortDate(filters.startDate)} to ${shortDate(filters.endDate)}`,
-    filters.region || "All regions",
-    filters.category || "All categories",
-    filters.segment || "All segments",
-    countLabel(report.uniqueOrders, "matching order"),
-  ].join(" · ");
-  const managerSummary = useMemo(() => generateSummary(
-    report,
-    shortDate(filters.startDate),
-    shortDate(filters.endDate),
-    { changes, largestDecline: largestRegionalDecline, contributingDrivers: regionalContributors },
-  ), [report, filters.startDate, filters.endDate, changes, largestRegionalDecline, regionalContributors]);
+  const isCompletedWeekSelected = Boolean(completedDefault && filters.startDate === completedDefault.startDate && filters.endDate === completedDefault.endDate);
+  const isCompletedWeeklyRange = new Date(`${filters.startDate}T00:00:00Z`).getUTCDay() === 1
+    && new Date(`${filters.endDate}T00:00:00Z`).getUTCDay() === 0
+    && shiftDate(filters.startDate, 6) === filters.endDate;
+  const managerSummaryPoints = useMemo(() => {
+    const regionsUp = regionDrivers.filter((driver) => driver.revenueChange > 0);
+    const regionsDown = regionDrivers.filter((driver) => driver.revenueChange < 0);
+    return [
+      {
+        label: "Sales by category",
+        value: report.categories.length ? report.categories.map((category) => `${category.productCategory} ${formatCurrency(category.revenue)}`).join(" · ") : "Unavailable",
+      },
+      {
+        label: "Regions vs prior period",
+        value: `Up: ${regionsUp.length ? regionsUp.map((driver) => `${driver.label} (+${formatCurrency(driver.revenueChange)})`).join(", ") : "none"} · Down: ${regionsDown.length ? regionsDown.map((driver) => `${driver.label} (${formatCurrency(driver.revenueChange)})`).join(", ") : "none"}`,
+      },
+      {
+        label: "Biggest discounts",
+        value: highestDiscountProducts.length ? highestDiscountProducts.slice(0, 3).map((product) => `${product.product} ${(product.averageDiscount * 100).toFixed(1)}%`).join(" · ") : "Unavailable",
+      },
+      {
+        label: "Margin impact",
+        value: highestDiscountProducts.length ? highestDiscountProducts.slice(0, 3).map((product) => `${product.product}: ${product.profitMargin.toFixed(1)}% margin (${product.profitMargin < 0 ? "hurt margin" : "remained positive"})`).join(" · ") : "Unavailable",
+      },
+    ];
+  }, [report.categories, regionDrivers, highestDiscountProducts]);
 
   useEffect(() => {
     reportTitleRef.current?.focus({ preventScroll: true });
-  }, []);
-
-  useEffect(() => {
-    const section = visualsRef.current;
-    if (!section) return undefined;
-    if (!("IntersectionObserver" in window)) {
-      const timer = window.setTimeout(() => setVisualsVisible(true), 0);
-      return () => window.clearTimeout(timer);
-    }
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setVisualsVisible(true);
-        observer.disconnect();
-      }
-    }, { threshold: 0.18 });
-    observer.observe(section);
-    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -439,13 +385,13 @@ export default function ReportDashboard({ records, startDate, endDate, generated
   const money = (value) => formatCurrency(value);
   const updateFilter = (field, value) => setFilters((current) => ({ ...current, [field]: value }));
   const resetFilters = () => setFilters({ startDate: defaultStart, endDate: defaultEnd, region: "", category: "", segment: "" });
-  const applyPeriod = (period) => {
-    const range = presetRanges[period];
-    setFilters((current) => ({
-      ...current,
-      startDate: range.startDate,
-      endDate: range.endDate,
-    }));
+  const earlierWeek = { startDate: shiftDate(filters.startDate, -7), endDate: shiftDate(filters.endDate, -7) };
+  const laterWeek = { startDate: shiftDate(filters.startDate, 7), endDate: shiftDate(filters.endDate, 7) };
+  const canInspectEarlierWeek = earlierWeek.startDate >= startDate;
+  const canInspectLaterWeek = Boolean(completedDefault && laterWeek.endDate <= completedDefault.endDate);
+  const moveReportWeek = (direction) => {
+    const range = direction < 0 ? earlierWeek : laterWeek;
+    setFilters((current) => ({ ...current, startDate: range.startDate, endDate: range.endDate }));
   };
   const handleTabKeyDown = (event, index) => {
     const keys = { ArrowRight: 1, ArrowLeft: -1 };
@@ -475,33 +421,61 @@ export default function ReportDashboard({ records, startDate, endDate, generated
     regions: { label: "Regions", rows: report.regions, columns: [{ key: "salesRegion", label: "Region" }, { key: "orders", label: "Orders" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: (value) => Number.isFinite(value) ? money(value) : "Unavailable" }, { key: "profitMargin", label: "Margin", render: (value) => Number.isFinite(value) ? `${value.toFixed(1)}%` : "Unavailable" }] },
     categories: { label: "Categories", rows: report.categories, columns: [{ key: "productCategory", label: "Category" }, { key: "orders", label: "Orders" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: (value) => Number.isFinite(value) ? money(value) : "Unavailable" }, { key: "profitMargin", label: "Margin", render: (value) => Number.isFinite(value) ? `${value.toFixed(1)}%` : "Unavailable" }] },
     products: { label: "Products", rows: report.products, columns: [{ key: "product", label: "Product" }, { key: "productCategory", label: "Category" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: (value) => Number.isFinite(value) ? money(value) : "Unavailable" }, { key: "averageDiscount", label: "Weighted discount", render: (value) => Number.isFinite(value) ? `${(value * 100).toFixed(1)}%` : "Unavailable" }] },
-    orders: { label: "Orders", rows: visibleOrders, columns: [{ key: "orderNumber", label: "Order ID" }, { key: "date", label: "Date", render: shortDate }, { key: "customerId", label: "Customer ID" }, { key: "customerName", label: "Customer" }, { key: "salesRegion", label: "Region" }, { key: "products", label: "Products" }, { key: "revenue", label: "Sales", render: money }, { key: "profit", label: "Profit", render: money }] },
+    orders: { label: "Orders", rows: visibleOrders, columns: [{ key: "orderNumber", label: "Order ID" }, { key: "date", label: "Date", render: shortDate }, { key: "customerName", label: "Customer" }, { key: "products", label: "Products" }, { key: "categories", label: "Categories" }, { key: "salesRegion", label: "Region" }, { key: "units", label: "Quantity" }, { key: "revenue", label: "Sales", render: money }, { key: "averageDiscount", label: "Discount", render: (value) => Number.isFinite(value) ? `${(value * 100).toFixed(1)}%` : "Unavailable" }, { key: "profit", label: "Profit", render: (value) => Number.isFinite(value) ? money(value) : "Unavailable" }] },
   };
+  const answerSalesQuestion = (rawQuestion) => {
+    const question = rawQuestion.trim();
+    if (!question) return;
+    const normalized = question.toLowerCase();
+    const requestedRegion = options.regions.find((region) => normalized.includes(region.toLowerCase()));
+    let answer;
+    if (requestedRegion) {
+      const matchesRegion = (record) => record.salesRegion.trim().toLowerCase() === requestedRegion.toLowerCase();
+      const currentRegionRecords = currentRecords.filter(matchesRegion);
+      const priorRegionRecords = priorRecords.filter(matchesRegion);
+      const currentRegionSales = currentRegionRecords.reduce((sum, record) => sum + record.revenue, 0);
+      const priorRegionSales = priorRegionRecords.reduce((sum, record) => sum + record.revenue, 0);
+      const change = currentRegionSales - priorRegionSales;
+      const productDrivers = comparisonDrivers(currentRegionRecords, priorRegionRecords, "product", 3);
+      const categoryDriver = comparisonDrivers(currentRegionRecords, priorRegionRecords, "productCategory", 1)[0];
+      const direction = change > 0 ? "up" : change < 0 ? "down" : "flat";
+      const drivers = productDrivers.filter((driver) => change < 0 ? driver.revenueChange < 0 : driver.revenueChange > 0);
+      answer = {
+        title: `${requestedRegion} is ${direction} ${money(Math.abs(change))} versus the prior period.`,
+        explanation: drivers.length ? `${drivers.slice(0, 2).map((driver) => `${driver.label} (${driver.revenueChange > 0 ? "+" : ""}${money(driver.revenueChange)})`).join(" and ")} explain the largest product-level movement.${categoryDriver ? ` ${categoryDriver.label} was the strongest category driver (${categoryDriver.revenueChange > 0 ? "+" : ""}${money(categoryDriver.revenueChange)}).` : ""}` : "No single product driver explains a material change in this selected period.",
+      };
+    } else if (normalized.includes("discount") || normalized.includes("margin")) {
+      answer = {
+        title: highestDiscountProducts.length ? `${highestDiscountProducts[0].product} had the highest weighted discount at ${(highestDiscountProducts[0].averageDiscount * 100).toFixed(1)}%.` : "Discount and margin data are unavailable.",
+        explanation: highestDiscountProducts.length ? highestDiscountProducts.slice(0, 3).map((product) => `${product.product}: ${product.profitMargin.toFixed(1)}% margin—${product.profitMargin < 0 ? "the discount hurt margin" : "margin remained positive"}`).join(" · ") : "Upload complete discount and profit columns to answer this question.",
+      };
+    } else if (normalized.includes("categor")) {
+      answer = { title: `${report.highestRevenueCategory} led category sales.`, explanation: report.categories.map((category) => `${category.productCategory}: ${money(category.revenue)}`).join(" · ") };
+    } else if (normalized.includes("region")) {
+      const up = regionDrivers.filter((driver) => driver.revenueChange > 0);
+      const down = regionDrivers.filter((driver) => driver.revenueChange < 0);
+      answer = { title: `${up.length} ${up.length === 1 ? "region is" : "regions are"} up; ${down.length} ${down.length === 1 ? "is" : "are"} down.`, explanation: `Up: ${up.length ? up.map((driver) => `${driver.label} (+${money(driver.revenueChange)})`).join(", ") : "none"}. Down: ${down.length ? down.map((driver) => `${driver.label} (${money(driver.revenueChange)})`).join(", ") : "none"}.` };
+    } else {
+      answer = { title: `${money(report.totalRevenue)} in sales across ${report.uniqueOrders.toLocaleString()} orders.`, explanation: `Ask about a named region, category sales, or discounts and margins for a more specific explanation.` };
+    }
+    setSalesQuestion(question);
+    setSalesAnswer({ question, ...answer });
+  };
+  const questionSuggestions = [
+    `Why is ${largestRegionalDecline?.label || options.regions[0] || "the leading"} region ${largestRegionalDecline ? "down" : "changing"}?`,
+    "Which regions are up or down?",
+    "Which discounts hurt our margins?",
+    "What are total sales by category?",
+  ];
 
   return (
     <section className="report-shell expanded-report" aria-labelledby="report-title">
-      <header className="report-heading report-heading-expanded"><div><p className="issue-line">{shortDate(filters.startDate)} — {shortDate(filters.endDate)}</p><h3 id="report-title" ref={reportTitleRef} tabIndex="-1">Sales<br /><em>performance.</em></h3></div><div className="generated-meta"><strong>{generatedDate}</strong><small>{countLabel(fileCount, "file")} · {countLabel(report.activeDays, "active day")}</small></div></header>
-
-      <section className="report-filter-panel no-print" aria-label="Report filters">
-        <GoldDateInput id="report-start" label="From" min={startDate} max={filters.endDate} value={filters.startDate} onChange={(value) => updateFilter("startDate", value)} />
-        <GoldDateInput id="report-end" label="To" min={filters.startDate} max={endDate} value={filters.endDate} onChange={(value) => updateFilter("endDate", value)} />
-        <div className="report-filter-field"><label htmlFor="report-region">Region</label><select id="report-region" value={filters.region} onChange={(event) => updateFilter("region", event.target.value)}><option value="">All regions</option>{options.regions.map((option) => <option key={option}>{option}</option>)}</select></div>
-        <div className="report-filter-field"><label htmlFor="report-category">Category</label><select id="report-category" value={filters.category} onChange={(event) => updateFilter("category", event.target.value)}><option value="">All categories</option>{options.categories.map((option) => <option key={option}>{option}</option>)}</select></div>
-        <div className="report-filter-field"><label htmlFor="report-segment">Segment</label><select id="report-segment" value={filters.segment} onChange={(event) => updateFilter("segment", event.target.value)}><option value="">All segments</option>{options.segments.map((option) => <option key={option}>{option}</option>)}</select></div>
-        <div className="filter-reset-field"><span>Actions</span><button type="button" disabled={!filtersDirty} onClick={resetFilters}>Reset filters</button></div>
-        <div className="period-presets" aria-label="Quick reporting periods">
-          <span>Quick periods</span>
-          <button type="button" aria-pressed={activePeriod === "week"} onClick={() => applyPeriod("week")}>Previous completed week</button>
-          <button type="button" aria-pressed={activePeriod === "month"} onClick={() => applyPeriod("month")}>Latest month</button>
-          <button type="button" aria-pressed={activePeriod === "previous-month"} onClick={() => applyPeriod("previous-month")}>Previous month</button>
-          <button type="button" aria-pressed={activePeriod === "all"} onClick={() => applyPeriod("all")}>All dates</button>
-        </div>
-        <p className="active-filter-summary" aria-live="polite"><strong>Showing</strong> {activeFilterText}</p>
-      </section>
+      <header className="report-heading report-heading-expanded"><div><p className="issue-line">{shortDate(filters.startDate)} — {shortDate(filters.endDate)}</p><h3 id="report-title" ref={reportTitleRef} tabIndex="-1">Weekly Manager <em>Report.</em></h3></div><div className="generated-meta"><strong>{generatedDate}</strong><small>{countLabel(fileCount, "file")} · {countLabel(report.activeDays, "active day")}</small></div></header>
 
       <div className={`report-results${resultsUpdating ? " is-updating" : ""}`}>
       <section className="monday-briefing" ref={briefingRevealRef} aria-labelledby="monday-briefing-title">
-        <div className="briefing-heading"><div><h4 id="monday-briefing-title">Monday briefing</h4></div><span>Sales totals, period movement, and margin risk</span></div>
+        <div className="briefing-heading"><div><p className="eyebrow">Monday briefing</p><h4 id="monday-briefing-title">{isCompletedWeeklyRange ? "Week of " : "Selected dates: "}{shortDate(filters.startDate)}–{shortDate(filters.endDate)}</h4><small>Compared with {shortDate(priorRange?.startDate)}–{shortDate(priorRange?.endDate)}</small></div><div className="week-navigation no-print"><span>{isCompletedWeekSelected ? "Latest completed week" : isCompletedWeeklyRange ? "Earlier completed week" : "Custom date range"}</span><div><button type="button" disabled={!canInspectEarlierWeek} onClick={() => moveReportWeek(-1)}>← Previous week</button><button type="button" disabled={!canInspectLaterWeek} onClick={() => moveReportWeek(1)}>Later week →</button><button type="button" aria-expanded={customDatesOpen} aria-controls="briefing-custom-dates" onClick={() => setCustomDatesOpen((open) => !open)}>Custom dates</button></div></div></div>
+        {customDatesOpen ? <div className="briefing-custom-dates no-print" id="briefing-custom-dates"><GoldDateInput id="briefing-start" label="Custom start" min={startDate} max={filters.endDate} value={filters.startDate} onChange={(value) => updateFilter("startDate", value)} /><GoldDateInput id="briefing-end" label="Custom end" min={filters.startDate} max={endDate} value={filters.endDate} onChange={(value) => updateFilter("endDate", value)} /><button type="button" onClick={() => setCustomDatesOpen(false)}>Done</button></div> : null}
         <div className="briefing-grid">
           <section className="analysis-panel" aria-labelledby="category-briefing-title">
             <div className="card-heading"><h5 id="category-briefing-title">Sales by category</h5><span>vs prior period</span></div>
@@ -513,19 +487,47 @@ export default function ReportDashboard({ records, startDate, endDate, generated
           </section>
 
           <section className="analysis-panel" aria-labelledby="region-briefing-title">
-            <div className="card-heading"><h5 id="region-briefing-title">Regions up or down</h5><span>vs prior period</span></div>
-            <div className="briefing-ranking">{report.regions.map((region, index) => {
-              const change = regionChanges.get(region.salesRegion) ?? 0;
-              const maxRevenue = report.regions[0]?.revenue || 1;
-              return <div className={`briefing-rank-row${change < 0 ? " is-risk" : ""}`} style={{ "--briefing-index": index * 3 + 1 }} key={region.salesRegion}><div className="briefing-rank-label"><strong>{region.salesRegion}</strong><span>{money(region.revenue)}</span></div><div className="briefing-bar-track"><span style={{ width: `${Math.max(4, (region.revenue / maxRevenue) * 100)}%` }} /></div><small className={changeClass(change)}>{change > 0 ? "▲ " : change < 0 ? "▼ " : "— "}{money(Math.abs(change))}</small></div>;
-            })}</div>
+            <div className="card-heading"><h5 id="region-briefing-title">Regional sales trends</h5><span>Eight completed weeks · latest change highlighted</span></div>
+            <RegionTrendSmallMultiples trends={regionalWeeklyTrends} />
           </section>
 
           <section className="analysis-panel discount-risk-panel" aria-labelledby="discount-risk-title">
-            <div className="card-heading"><h5 id="discount-risk-title">Highest-discount products</h5><span>Margin effect</span></div>
-            <div className="discount-risk-list">{highestDiscountProducts.map((product, index) => <div className={`discount-risk-row${Number.isFinite(product.profit) && product.profit < 0 ? " is-risk" : ""}`} style={{ "--briefing-index": index * 3 + 2 }} key={product.product}><span className="risk-rank">{index + 1}</span><div><strong title={product.product}>{product.product}</strong><span>{(product.averageDiscount * 100).toFixed(1)}% weighted discount</span></div><p><strong className={changeClass(product.profit)}>{Number.isFinite(product.profit) ? money(product.profit) : "Unavailable"}</strong><small>{Number.isFinite(product.profitMargin) ? `${product.profitMargin.toFixed(1)}% margin` : "Margin unavailable"}</small></p></div>)}</div>
-            {!highestDiscountProducts.length && <p className="briefing-empty">{report.discountAvailability === "available" ? "No discounted products appear in this period." : "Discount data unavailable or incomplete."}</p>}
+            <div className="card-heading"><h5 id="discount-risk-title">Highest-discount products</h5><span>Direct margin verdict</span></div>
+            <DiscountMarginCards products={highestDiscountProducts} />
           </section>
+        </div>
+      </section>
+
+      <section className="manager-summary-card" ref={managerSummaryRevealRef} aria-labelledby="manager-summary-title">
+        <div className="manager-summary-overview">
+          <header className="manager-summary-label"><span aria-hidden="true">M</span><div><h4 id="manager-summary-title">Manager summary</h4><small>{shortDate(filters.startDate)}–{shortDate(filters.endDate)} vs {shortDate(priorRange?.startDate)}–{shortDate(priorRange?.endDate)}</small></div></header>
+          <div className="manager-summary-copy">
+            <ul className="manager-summary-points">
+              {managerSummaryPoints.map((point) => <li key={point.label}><strong>{point.label}</strong><span>{point.value}</span></li>)}
+            </ul>
+          </div>
+        </div>
+        <div className="sales-question-tool" aria-labelledby="sales-question-title">
+          <div className="sales-question-heading"><h5 id="sales-question-title">Get the reason behind the number</h5></div>
+          <form className="sales-question-form" onSubmit={(event) => { event.preventDefault(); answerSalesQuestion(salesQuestion); }}><label className="sr-only" htmlFor="sales-question">Ask a sales question</label><input id="sales-question" value={salesQuestion} onChange={(event) => setSalesQuestion(event.target.value)} placeholder="For example: Why is the West region down?" /><button className="button primary" type="submit">Answer</button><button className="sales-question-reset" type="button" disabled={!salesQuestion && !salesAnswer} onClick={() => { setSalesQuestion(""); setSalesAnswer(null); }}>Reset</button></form>
+          <div className="question-suggestions no-print" aria-label="Suggested questions">{questionSuggestions.map((question) => <button type="button" key={question} onClick={() => answerSalesQuestion(question)}>{question}</button>)}</div>
+          {salesAnswer ? <article className="sales-answer" aria-live="polite"><span>Answer</span><p className="sales-answer-question">“{salesAnswer.question}”</p><strong>{salesAnswer.title}</strong><p>{salesAnswer.explanation}</p></article> : <p className="sales-question-empty">Choose a suggested question or ask one in your own words.</p>}
+        </div>
+      </section>
+
+      <section className="order-data-overview" ref={orderDetailRef} aria-labelledby="order-data-title">
+        <div className="order-data-overview-head"><div><p className="eyebrow">Order-level data</p><h4 id="order-data-title">Every order is available for inspection.</h4><p>Trace the figures in this report back to the underlying transaction details.</p></div><ul aria-label="Available order fields">{["Date", "Customer", "Product", "Category", "Region", "Quantity", "Price / sales", "Discount", "Profit"].map((field) => <li key={field}>{field}</li>)}</ul></div>
+        <section className="report-filter-panel detail-filter-panel embedded-detail-filters no-print" aria-label="Order data filters">
+          <div className="report-filter-field"><label htmlFor="report-region">Region</label><select id="report-region" value={filters.region} onChange={(event) => updateFilter("region", event.target.value)}><option value="">All regions</option>{options.regions.map((option) => <option key={option}>{option}</option>)}</select></div>
+          <div className="report-filter-field"><label htmlFor="report-category">Category</label><select id="report-category" value={filters.category} onChange={(event) => updateFilter("category", event.target.value)}><option value="">All categories</option>{options.categories.map((option) => <option key={option}>{option}</option>)}</select></div>
+          <div className="report-filter-field"><label htmlFor="report-segment">Segment</label><select id="report-segment" value={filters.segment} onChange={(event) => updateFilter("segment", event.target.value)}><option value="">All segments</option>{options.segments.map((option) => <option key={option}>{option}</option>)}</select></div>
+          <div className="filter-reset-field"><span>Actions</span><button type="button" disabled={!filtersDirty} onClick={resetFilters}>Reset filters</button></div>
+          <p className="active-filter-summary" aria-live="polite"><strong>Showing</strong> {countLabel(report.uniqueOrders, "order")} across {filters.region || "all regions"}, {filters.category || "all categories"}, and {filters.segment || "all segments"}.</p>
+        </section>
+        <div className="order-data-detail">
+          <div className="breakdown-head"><div><h5>Explore the data</h5><small>Review performance or trace an individual order.</small></div><div className="tabs" role="tablist" aria-label="Report breakdown">{Object.entries(views).map(([key, item], index) => <button id={`report-tab-${key}`} ref={(element) => { tabRefs.current[index] = element; }} type="button" role="tab" aria-controls={`report-panel-${key}`} aria-selected={view === key} tabIndex={view === key ? 0 : -1} className={view === key ? "active" : ""} onKeyDown={(event) => handleTabKeyDown(event, index)} onClick={() => setView(key)} key={key}>{item.label}</button>)}</div></div>
+          {view === "orders" && <div className="order-search no-print"><label htmlFor="order-search">Find an order or customer</label><input id="order-search" type="search" value={orderQuery} onChange={(event) => setOrderQuery(event.target.value)} placeholder="Search order ID, customer ID or name, product, or region" /><span>{countLabel(visibleOrders.length, "matching order")}</span></div>}
+          <div id={`report-panel-${view}`} className={view === "orders" ? "orders-panel" : undefined} role="tabpanel" aria-labelledby={`report-tab-${view}`} tabIndex="0"><DataTable rows={views[view].rows} columns={views[view].columns} label={views[view].label} /></div>
         </div>
       </section>
 
@@ -535,24 +537,8 @@ export default function ReportDashboard({ records, startDate, endDate, generated
         <MetricCard label="Weighted discount" value={report.discountAvailability === "available" ? `${(report.averageDiscount * 100).toFixed(1)}%` : "Unavailable"} note={report.discountAvailability === "available" ? "Weighted by visible sales" : report.discountAvailability === "partial" ? "Partial discount data" : "Discount column not supplied"} />
         <MetricCard label="Orders" value={report.uniqueOrders.toLocaleString()} note={changeLabel(changes.orders)} trend={changes.orders} />
         <MetricCard label="Units sold" value={report.totalUnits.toLocaleString()} note={changeLabel(changes.units)} trend={changes.units} />
-        <MetricCard label="Average order" value={money(report.averageOrderValue)} note={`Median ${money(report.medianOrderValue)}`} onAnimationEnd={(event) => { if (event.target === event.currentTarget && event.animationName === "guided-metric-pulse") setMetricsSequenceComplete(true); }} />
+        <MetricCard label="Average order" value={money(report.averageOrderValue)} note={`Median ${money(report.medianOrderValue)}`} />
       </div>
-
-      <section className="manager-summary-card" ref={managerSummaryRevealRef} aria-labelledby="manager-summary-title">
-        <div className="manager-summary-label"><span aria-hidden="true">M</span><div><p className="eyebrow">Ready for Monday</p><h4 id="manager-summary-title">Manager summary</h4></div></div>
-        <div className="manager-summary-copy">
-          <p>{managerSummary}</p>
-          <small>Comparison: {shortDate(priorRange?.startDate)}–{shortDate(priorRange?.endDate)} · Current period: {shortDate(filters.startDate)}–{shortDate(filters.endDate)}</small>
-        </div>
-        {largestRegionalDecline ? <aside className="driver-evidence">
-          <span>Why {largestRegionalDecline.label} changed</span>
-          <strong>{money(largestRegionalDecline.revenueChange)} vs prior</strong>
-          <ul>
-            {regionalContributors.filter((driver) => driver.revenueChange < 0).slice(0, 3).map((driver) => <li key={driver.label}><span>{driver.label}</span><b>{money(driver.revenueChange)}</b></li>)}
-            {regionalCategoryContributors.filter((driver) => driver.revenueChange < 0).slice(0, 2).map((driver) => <li key={`category-${driver.label}`}><span>{driver.label} category</span><b>{money(driver.revenueChange)}</b></li>)}
-          </ul>
-        </aside> : <aside className="driver-evidence positive-evidence"><span>Regional movement</span><strong>No region declined versus the prior period.</strong></aside>}
-      </section>
 
       <section className="actionable-insights" ref={actionableInsightsRevealRef} aria-labelledby="actionable-insights-title">
         <div className="actionable-insights-heading">
@@ -605,23 +591,6 @@ export default function ReportDashboard({ records, startDate, endDate, generated
         {report.discountAvailability === "available" ? <div className="compact-analysis-table"><table><thead><tr><th>Group</th><th>Sales</th><th>Orders</th><th>Units</th><th>Profit</th><th>Margin</th></tr></thead><tbody>{report.discountImpact.map((group) => <tr key={group.kind}><td>{group.kind === "discounted" ? "Discounted lines" : "Non-discounted lines"}</td><td>{money(group.sales)}</td><td>{group.orders.toLocaleString()}</td><td>{group.units.toLocaleString()}</td><td>{Number.isFinite(group.profit) ? money(group.profit) : "Unavailable"}</td><td>{Number.isFinite(group.profitMargin) ? `${group.profitMargin.toFixed(1)}%` : "Unavailable"}</td></tr>)}</tbody></table></div> : <p className="briefing-empty">{report.discountAvailability === "partial" ? "Discount data is only partially available, so the comparison is withheld." : "Discount data unavailable."}</p>}
       </section>
 
-      <section ref={visualsRef} className="report-visuals" aria-labelledby="visual-overview-title">
-        <div className="visuals-heading">
-          <div><p className="eyebrow">Performance at a glance</p><h4 id="visual-overview-title">Where the business is moving.</h4></div>
-          <p>Relative contribution across the current filtered period.</p>
-        </div>
-        <div className={`visual-grid chart-reveal${visualsVisible ? " is-visible" : ""}`}>
-          <VisualRanking title="Sales by category" eyebrow="Revenue mix" rows={report.categories} labelKey="productCategory" valueFormatter={money} />
-          <VisualRanking title="Sales by region" eyebrow="Market strength" rows={report.regions} labelKey="salesRegion" valueFormatter={money} tone="amber" />
-          {report.profitAvailability === "available" ? <VisualRanking title="Profit leaders" eyebrow="Margin contribution" rows={[...report.products].filter((product) => Number.isFinite(product.profit) && product.profit > 0).sort((a, b) => b.profit - a.profit)} labelKey="product" valueKey="profit" valueFormatter={money} tone="green" /> : <article className="visual-card visual-card-green"><header><div><span>Margin contribution</span><h5>Profit leaders</h5></div></header><p className="briefing-empty">Profit data unavailable. No profit ranking was calculated.</p></article>}
-          <MixWheel rows={report.categories} total={report.totalRevenue} money={money} />
-        </div>
-      </section>
-      <section className="breakdown-card expanded-breakdown">
-        <div className="breakdown-head"><div><h4>Detail</h4><small>Review performance or trace an individual order.</small></div><div className="tabs" role="tablist" aria-label="Report breakdown">{Object.entries(views).map(([key, item], index) => <button id={`report-tab-${key}`} ref={(element) => { tabRefs.current[index] = element; }} type="button" role="tab" aria-controls={`report-panel-${key}`} aria-selected={view === key} tabIndex={view === key ? 0 : -1} className={view === key ? "active" : ""} onKeyDown={(event) => handleTabKeyDown(event, index)} onClick={() => setView(key)} key={key}>{item.label}</button>)}</div></div>
-        {view === "orders" && <div className="order-search no-print"><label htmlFor="order-search">Find an order or customer</label><input id="order-search" type="search" value={orderQuery} onChange={(event) => setOrderQuery(event.target.value)} placeholder="Search order ID, customer ID or name, product, or region" /><span>{countLabel(visibleOrders.length, "matching order")}</span></div>}
-        <div id={`report-panel-${view}`} className={view === "orders" ? "orders-panel" : undefined} role="tabpanel" aria-labelledby={`report-tab-${view}`} tabIndex="0"><DataTable rows={views[view].rows} columns={views[view].columns} label={views[view].label} /></div>
-      </section>
       </div>
 
       <section className="report-actions no-print"><div className="restart-action"><button className="button ghost danger-action" onClick={confirmRestart}>Start a new report</button><small>Clears the current files and report.</small></div><div><button className="button secondary" type="button" onClick={downloadFilteredCsv}>Download filtered CSV</button><button className="button primary" type="button" onClick={() => window.print()}>Print / Save PDF</button></div></section>
