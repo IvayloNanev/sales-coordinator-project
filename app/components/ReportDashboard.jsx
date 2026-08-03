@@ -534,16 +534,20 @@ export default function ReportDashboard({ records, startDate, endDate, generated
       <div className="metric-grid metric-grid-expanded" ref={metricsRevealRef}>
         <MetricCard featured label="Sales" value={money(report.totalRevenue)} note={changeLabel(changes.revenue)} trend={changes.revenue} />
         <MetricCard featured label="Profit" value={report.profitAvailability === "available" ? money(report.totalProfit) : "Unavailable"} note={report.profitAvailability === "available" ? `${changeLabel(changes.profit)} · ${report.profitMargin.toFixed(1)}% margin` : report.profitAvailability === "partial" ? "Partial profit data; analysis withheld" : "Profit column not supplied"} trend={report.profitAvailability === "available" ? changes.profit : null} />
-        <MetricCard label="Weighted discount" value={report.discountAvailability === "available" ? `${(report.averageDiscount * 100).toFixed(1)}%` : "Unavailable"} note={report.discountAvailability === "available" ? "Weighted by visible sales" : report.discountAvailability === "partial" ? "Partial discount data" : "Discount column not supplied"} />
         <MetricCard label="Orders" value={report.uniqueOrders.toLocaleString()} note={changeLabel(changes.orders)} trend={changes.orders} />
         <MetricCard label="Units sold" value={report.totalUnits.toLocaleString()} note={changeLabel(changes.units)} trend={changes.units} />
         <MetricCard label="Average order" value={money(report.averageOrderValue)} note={`Median ${money(report.medianOrderValue)}`} />
       </div>
 
+      <section className="breakdown-card discount-impact-summary" aria-labelledby="discount-impact-title">
+        <div className="breakdown-head"><div><h4 id="discount-impact-title">Discount impact</h4><small>{report.discountAvailability === "available" ? `${(report.averageDiscount * 100).toFixed(1)}% weighted discount across visible sales.` : "Discount rate is weighted by visible sales."}</small></div></div>
+        {report.discountAvailability === "available" ? <div className="compact-analysis-table"><table><thead><tr><th>Group</th><th>Sales</th><th>Orders</th><th>Units</th><th>Profit</th><th>Margin</th></tr></thead><tbody>{report.discountImpact.map((group) => <tr key={group.kind}><td>{group.kind === "discounted" ? "Discounted lines" : "Non-discounted lines"}</td><td>{money(group.sales)}</td><td>{group.orders.toLocaleString()}</td><td>{group.units.toLocaleString()}</td><td>{Number.isFinite(group.profit) ? money(group.profit) : "Unavailable"}</td><td>{Number.isFinite(group.profitMargin) ? `${group.profitMargin.toFixed(1)}%` : "Unavailable"}</td></tr>)}</tbody></table></div> : <p className="briefing-empty">{report.discountAvailability === "partial" ? "Discount data is only partially available, so the comparison is withheld." : "Discount data unavailable."}</p>}
+      </section>
+
       <section className="actionable-insights" ref={actionableInsightsRevealRef} aria-labelledby="actionable-insights-title">
         <div className="actionable-insights-heading">
-          <div><p className="eyebrow">Recommended follow-up</p><h4 id="actionable-insights-title">Actionable insights</h4></div>
-          <p>Three focused signals for the next manager conversation.</p>
+          <h4 id="actionable-insights-title">Recommended actions</h4>
+          <p>Three evidence-based priorities for the next manager conversation.</p>
         </div>
         <div className="actionable-insights-grid">
           <article className="insight-card insight-card-risk">
@@ -584,11 +588,6 @@ export default function ReportDashboard({ records, startDate, endDate, generated
             </details>
           </article>
         </div>
-      </section>
-
-      <section className="breakdown-card discount-impact-summary" aria-labelledby="discount-impact-title">
-        <div className="breakdown-head"><div><h4 id="discount-impact-title">Discount impact</h4><small>Line-item groups; discount rate is weighted by sales.</small></div></div>
-        {report.discountAvailability === "available" ? <div className="compact-analysis-table"><table><thead><tr><th>Group</th><th>Sales</th><th>Orders</th><th>Units</th><th>Profit</th><th>Margin</th></tr></thead><tbody>{report.discountImpact.map((group) => <tr key={group.kind}><td>{group.kind === "discounted" ? "Discounted lines" : "Non-discounted lines"}</td><td>{money(group.sales)}</td><td>{group.orders.toLocaleString()}</td><td>{group.units.toLocaleString()}</td><td>{Number.isFinite(group.profit) ? money(group.profit) : "Unavailable"}</td><td>{Number.isFinite(group.profitMargin) ? `${group.profitMargin.toFixed(1)}%` : "Unavailable"}</td></tr>)}</tbody></table></div> : <p className="briefing-empty">{report.discountAvailability === "partial" ? "Discount data is only partially available, so the comparison is withheld." : "Discount data unavailable."}</p>}
       </section>
 
       </div>
