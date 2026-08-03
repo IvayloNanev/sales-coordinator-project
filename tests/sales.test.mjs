@@ -392,6 +392,14 @@ test("calculates profit metrics, prior periods, and performance drivers", () => 
     largestDecline: { label: "East", revenueChange: -75 },
     contributingDrivers: [{ label: "Chairs", revenueChange: -50 }],
   }), /largest drag was East.*Chairs/s);
+  const managerBrief = generateSummary(current, "Jan 8", "Jan 9", {
+    changes: performanceChange(current, previous),
+    regionDrivers: [{ label: "West", revenueChange: 120 }, { label: "East", revenueChange: -75 }],
+    discountProducts: [{ product: "Desk", averageDiscount: 0.4, profitMargin: -8 }],
+  });
+  assert.match(managerBrief, /Category sales were/);
+  assert.match(managerBrief, /Regions up.*West.*Regions down.*East/s);
+  assert.match(managerBrief, /Desk \(40\.0% discount, -8\.0% margin—hurting margin\)/);
 });
 
 test("preserves optional financial availability, normalizes aliases, and round-trips auditable exports", () => {

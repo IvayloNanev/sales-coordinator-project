@@ -69,8 +69,8 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   const reviewVisible = Boolean(validation && !isValidating);
   const validationTitleRef = useRef(null);
   const reviewDialogRef = useRef(null);
-  const reviewCardsRef = useChartReveal(reviewVisible, { threshold: 0.06, rootMargin: "0px 0px 24% 0px" });
-  const finalActionRef = useChartReveal(reviewVisible && cardsSequenceComplete, { threshold: 0.05, rootMargin: "0px 0px 22% 0px" });
+  const reviewCardsRef = useChartReveal(reviewVisible, { threshold: 0.22, rootMargin: "0px 0px -15% 0px" });
+  const finalActionRef = useChartReveal(reviewVisible && cardsSequenceComplete, { threshold: 0.18, rootMargin: "0px 0px -8% 0px" });
   const filesReady = files.length > 0;
   const periodReady = Boolean(startDate && endDate && startDate <= endDate);
   const validationReady = Boolean(validation && validation.validRecords.length);
@@ -113,6 +113,23 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
     window.scrollTo({ top: 0, behavior: "auto" });
     validationTitleRef.current?.focus({ preventScroll: true });
   }, [reviewVisible]);
+
+  useEffect(() => {
+    if (!reviewVisible || !("IntersectionObserver" in window)) return undefined;
+    const cards = reviewCardsRef.current?.querySelectorAll(".file-overview-facts article");
+    if (!cards?.length) return undefined;
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-scroll-pulsing");
+        observer.unobserve(entry.target);
+      });
+    }, { threshold: 0.45, rootMargin: "0px 0px -10% 0px" });
+
+    cards.forEach((card) => observer.observe(card));
+    return () => observer.disconnect();
+  }, [reviewCardsRef, reviewVisible]);
 
   useEffect(() => {
     const dialog = reviewDialogRef.current;
@@ -264,7 +281,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
               <span className={`review-badge ${flaggedRows ? "warning" : "success"}`}>{flaggedRows ? `${flaggedRows} flagged` : "Passed"}</span>
             </header>
 
-            <section className="file-validation-overview" ref={reviewCardsRef} aria-label="File validation overview" onAnimationEnd={(event) => { if (event.target === event.currentTarget && event.animationName === "guided-card-focus") setCardsSequenceComplete(true); }}>
+            <section className="file-validation-overview" ref={reviewCardsRef} aria-label="File validation overview" onAnimationEnd={(event) => { if (event.animationName === "guided-upload-pulse" && event.target.matches(".file-overview-facts article:last-child")) setCardsSequenceComplete(true); }}>
               <div className="file-overview-head">
                 <div><p className="section-number">File validation overview</p><h3>What we found in your file</h3><p>Review the source, usable data, quality checks, and supported reporting before continuing.</p></div>
                 <span className={`review-badge ${flaggedRows ? "warning" : "success"}`}>{flaggedRows ? "Ready with exclusions" : "Ready"}</span>
