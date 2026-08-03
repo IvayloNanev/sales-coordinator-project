@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import useChartReveal from "../hooks/useChartReveal";
+import { calculateReport, formatCurrency } from "../../lib/sales";
 
 const formatPeriod = (startDate, endDate) => {
   if (!startDate || !endDate) return "Waiting for valid dates";
@@ -59,13 +61,21 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   const [kaggleError, setKaggleError] = useState("");
   const [isSourceEditing, setIsSourceEditing] = useState(false);
   const [isBuildingReport, setIsBuildingReport] = useState(false);
-  const validationTitleRef = useRef(null);
+  const [pendingFiles, setPendingFiles] = useState([]);
+  const [isProcessingValidation, setIsProcessingValidation] = useState(false);
+  const [activeReviewPanel, setActiveReviewPanel] = useState("");
+  const [cardsSequenceComplete, setCardsSequenceComplete] = useState(false);
+  const [uploadMotionReady, setUploadMotionReady] = useState(false);
   const reviewVisible = Boolean(validation && !isValidating);
+  const validationTitleRef = useRef(null);
+  const reviewDialogRef = useRef(null);
+  const reviewCardsRef = useChartReveal(reviewVisible, { threshold: 0.06, rootMargin: "0px 0px 24% 0px" });
+  const finalActionRef = useChartReveal(reviewVisible && cardsSequenceComplete, { threshold: 0.05, rootMargin: "0px 0px 22% 0px" });
   const filesReady = files.length > 0;
   const periodReady = Boolean(startDate && endDate && startDate <= endDate);
   const validationReady = Boolean(validation && validation.validRecords.length);
   const ready = filesReady && periodReady && validationReady && !isValidating;
-  const records = validation?.validRecords ?? [];
+  const records = useMemo(() => validation?.validRecords ?? [], [validation]);
   const isSalesScopeImport = records.length > 0 && records.every((record) => record.sourceProfile === "SalesScope");
   const primaryFile = intakeAnalysis.files[0] ?? { columnNames: [], previewRows: [] };
   const columnCount = Math.max(0, ...intakeAnalysis.files.map((file) => file.columnCount ?? 0));
@@ -78,6 +88,8 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   const unknownRegions = validation?.dataWarnings?.filter((record) => record.error?.startsWith("Unknown sales region")).length ?? 0;
   const unknownCategories = validation?.dataWarnings?.filter((record) => record.error?.startsWith("Unknown product category")).length ?? 0;
   const optionalMeasureWarnings = validation?.dataWarnings?.length ?? 0;
+  const controlTotals = useMemo(() => calculateReport(records), [records]);
+  const sourceDateCoverage = formatPeriod(primaryFile.startDate ?? startDate, primaryFile.endDate ?? endDate);
   const qualityChecks = [
     ["Order and ship dates", invalidShipDates, invalidShipDates ? `${countLabel(invalidShipDates, "row")} has a ship date before its order date` : "No ship dates occur before order dates"],
     ["Regions", unknownRegions, unknownRegions ? `${countLabel(unknownRegions, "unknown value")} excluded` : `${validation?.normalizedRegions ?? 0} aliases normalized to HomePlus regions`],
@@ -86,9 +98,28 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   ];
 
   useEffect(() => {
+    let secondFrame;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => setUploadMotionReady(true));
+    });
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!reviewVisible) return;
+    window.scrollTo({ top: 0, behavior: "auto" });
     validationTitleRef.current?.focus({ preventScroll: true });
   }, [reviewVisible]);
+
+  useEffect(() => {
+    const dialog = reviewDialogRef.current;
+    if (!dialog) return;
+    if (activeReviewPanel && !dialog.open) dialog.showModal();
+    if (!activeReviewPanel && dialog.open) dialog.close();
+  }, [activeReviewPanel]);
 
   const downloadValidationResults = () => {
     const rows = [
@@ -107,22 +138,41 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
     window.setTimeout(onProduceResults, 520);
   };
 
-  const addSelectedFiles = async (incoming) => {
-    const scrollTop = window.scrollY;
+  const processSelectedFiles = async (incoming, replaceCurrent = isSourceEditing) => {
+    if (!incoming.length || isProcessingValidation) return;
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
-    await (isSourceEditing ? onReplaceFiles(incoming) : onFiles(incoming));
-    setIsSourceEditing(false);
-    requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo({ top: scrollTop, behavior: "auto" })));
+    setCardsSequenceComplete(false);
+    setIsProcessingValidation(true);
+    try {
+      await new Promise((resolve) => window.setTimeout(resolve, 180));
+      await (replaceCurrent ? onReplaceFiles(incoming) : onFiles(incoming));
+      setPendingFiles([]);
+      setIsSourceEditing(false);
+      requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" })));
+    } finally {
+      setIsProcessingValidation(false);
+    }
+  };
+
+  const stageSelectedFiles = (incoming) => {
+    const selected = incoming.filter((file) => file?.name);
+    if (!selected.length) return;
+    setPendingFiles((current) => {
+      const base = isSourceEditing ? [] : current;
+      return [...base, ...selected.filter((file) => !base.some((existing) => existing.name === file.name && existing.size === file.size))];
+    });
   };
 
   const handleDrop = (event) => {
     event.preventDefault();
     setIsDragging(false);
-    addSelectedFiles([...event.dataTransfer.files]);
+    stageSelectedFiles([...event.dataTransfer.files]);
   };
 
   const loadKaggleDataset = async () => {
     setIsLoadingKaggle(true);
+    setCardsSequenceComplete(false);
+    setIsProcessingValidation(true);
     setKaggleError("");
     try {
       const response = await fetch("/sample-files/sample-superstore.csv");
@@ -132,17 +182,21 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
         "kaggle-superstore.csv",
         { type: "text/csv" },
       );
-      await addSelectedFiles([dataset]);
+      await new Promise((resolve) => window.setTimeout(resolve, 180));
+      await (isSourceEditing ? onReplaceFiles([dataset]) : onFiles([dataset]));
+      setPendingFiles([]);
+      setIsSourceEditing(false);
     } catch (error) {
       setKaggleError(error instanceof Error ? error.message : "Unable to load the Kaggle dataset");
     } finally {
       setIsLoadingKaggle(false);
+      setIsProcessingValidation(false);
     }
   };
 
   return (
     <div
-      className={`intake-layout${reviewVisible ? " has-review" : ""}${isDragging ? " page-dragging" : ""}${isBuildingReport ? " report-transitioning" : ""}`}
+      className={`intake-layout${reviewVisible ? " has-review" : ""}${uploadMotionReady ? " upload-motion-ready" : ""}${isDragging ? " page-dragging" : ""}${isBuildingReport ? " report-transitioning" : ""}${isProcessingValidation ? " validation-processing" : ""}`}
       onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }}
       onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; setIsDragging(true); }}
       onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setIsDragging(false); }}
@@ -151,34 +205,42 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
       <section className={`panel intake-upload${reviewVisible && !isSourceEditing ? " source-complete-panel" : ""}`} aria-labelledby="files-title" aria-busy={isValidating}>
         {reviewVisible && !isSourceEditing ? (
           <div className="completed-source-summary">
-            <div>
-              <p className="section-number">Source complete</p>
-              <h1 id="files-title">{countLabel(files.length, "file")} validated and ready</h1>
-              <p>{totalRecords.toLocaleString()} rows checked · {formatPeriod(startDate, endDate)}</p>
+            <div className="summary-intro">
+              <p className="section-number">Import summary</p>
+              <h1 id="files-title">Your sales at a glance</h1>
+              <p>A concise snapshot of the source used for this report.</p>
             </div>
-            <button className="button secondary" type="button" onClick={() => setIsSourceEditing(true)}>Replace source files</button>
+            <dl className="import-summary-stats">
+              <div><dt>Files</dt><dd>{files.length.toLocaleString()}</dd></div>
+              <div><dt>Rows received</dt><dd>{totalRecords.toLocaleString()}</dd></div>
+              <div><dt>Columns</dt><dd>{columnCount.toLocaleString()}</dd></div>
+              <div><dt>Reporting period</dt><dd>{formatPeriod(startDate, endDate)}</dd></div>
+            </dl>
+            <button className="button secondary summary-replace-action" type="button" onClick={() => { setPendingFiles([]); setIsSourceEditing(true); }}>Replace files</button>
           </div>
         ) : <div className="intake-upload-content">
         <div className="intake-heading">
           <p className="issue-line">Sales file automation</p>
-          <h1 id="files-title">Turn sales files into <em>validated weekly reports.</em></h1>
+          <h1 id="files-title">Turn sales <span className="headline-files">files</span> into <em>validated weekly reports.</em></h1>
           <p>Validate an export, catch reporting issues, and prepare Marcus’s manager-ready weekly numbers.</p>
         </div>
         <div className="upload-workspace">
-          <label
-            className={`drop-zone hero-drop-zone${isDragging ? " dragging" : ""}${filesReady ? " has-files" : ""}`}
-          >
-            <span className="upload-icon" aria-hidden="true">{isValidating ? "···" : filesReady ? "✓" : "⇧"}</span>
-            <strong>{isDragging ? "Drop supported files here" : isValidating ? "Reading and validating…" : filesReady ? `${countLabel(files.length, "file")} ready` : "Choose sales files"}</strong>
-            <span>{filesReady ? "Drop more files or click to browse" : "Drag and drop, or browse CSV, Excel, JSON, TSV, or experimental table-based PDF"}</span>
-            <input type="file" multiple accept=".csv,.xlsx,.xls,.xlsm,.ods,.json,.tsv,.tab,.psv,.txt,.dat,.pdf" onChange={(event) => { addSelectedFiles([...event.target.files]); event.currentTarget.value = ""; }} />
-          </label>
+          <div className="manual-upload-column">
+            <label
+              className={`drop-zone hero-drop-zone${isDragging ? " dragging" : ""}${pendingFiles.length ? " has-files" : ""}`}
+            >
+              <span className="upload-icon" aria-hidden="true">{pendingFiles.length ? "✓" : "⇧"}</span>
+              <strong>{isDragging ? "Drop supported files here" : pendingFiles.length ? `${countLabel(pendingFiles.length, "file")} selected` : "Choose sales files"}</strong>
+              <span>{pendingFiles.length ? pendingFiles.map((file) => file.name).join(", ") : "Drag and drop, or browse CSV, Excel, JSON, TSV, or experimental table-based PDF"}</span>
+              <input type="file" multiple accept=".csv,.xlsx,.xls,.xlsm,.ods,.json,.tsv,.tab,.psv,.txt,.dat,.pdf" onChange={(event) => { stageSelectedFiles([...event.target.files]); event.currentTarget.value = ""; }} />
+            </label>
+            {pendingFiles.length > 0 && <button className="button primary validate-files-button" type="button" onClick={() => processSelectedFiles(pendingFiles)}>Validate data<span aria-hidden="true">→</span></button>}
+          </div>
           <div className="upload-support">
             <div className="sample-callout kaggle-callout">
               <div>
                 <span className="section-number">Need a sample?</span>
                 <strong>Use the verified Superstore dataset</strong>
-                <p>Loads 9,994 order lines with sales, discounts, and profit.</p>
                 {kaggleError && <p className="kaggle-error" role="alert">{kaggleError}</p>}
               </div>
               <div className="sample-actions">
@@ -188,48 +250,42 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
                 <a href="https://www.kaggle.com/datasets/vivek468/superstore-dataset-final" target="_blank" rel="noreferrer" aria-label="View the Superstore dataset on Kaggle">Source</a>
               </div>
             </div>
-            <section className="file-guidance" aria-labelledby="file-guidance-title">
-              <div className="file-guidance-head">
-                <div><p className="section-number">File requirements</p><h2 id="file-guidance-title">What Marcus needs</h2></div>
-              </div>
-              <p><strong>Best formats:</strong> CSV or Excel exports.</p>
-              <details>
-                <summary>View the 11 reporting fields</summary>
-                <ul>
-                  {["Order date", "Order ID", "Customer", "Segment", "Product", "Category", "Region", "Quantity", "Sales", "Discount", "Profit"].map((column) => <li key={column}>{column}</li>)}
-                </ul>
-              </details>
-            </section>
           </div>
         </div>
         </div>}
         {isValidating && <div className="local-processing-status" role="status"><span aria-hidden="true" />Reading dates and checking every row…</div>}
       </section>
+      {isProcessingValidation && <div className="validation-processing-overlay" role="status" aria-live="assertive"><span aria-hidden="true" /><strong>Validation is being processed</strong><small>Checking dates, columns, and every sales row…</small></div>}
 
       {reviewVisible && <aside className={`intake-status incoming-audit${isBuildingReport ? " report-transitioning" : ""}`} aria-label="Automatic incoming data review">
           <section className={`data-review-card panel${flaggedRows ? " has-errors" : " all-clear"}`} aria-labelledby="data-review-title">
             <header className="data-review-head">
-              <div><p className="section-number">Data validation</p><h2 id="data-review-title" ref={validationTitleRef} tabIndex="-1">{flaggedRows ? "Review the flagged rows" : "Sales data is ready"}</h2><p>{flaggedRows ? "Invalid rows will stay out of the report; valid rows can still be analyzed." : "The file passed validation and can be used for weekly or monthly reporting."}</p></div>
+              <div><p className="section-number">Validation results</p><h2 id="data-review-title" ref={validationTitleRef} tabIndex="-1">{flaggedRows ? "Ready—with exclusions" : "Ready to report"}</h2><p>{flaggedRows ? "Review what passed, what was excluded, and why before building the report." : "Required fields, dates, and business rules passed. The validated rows are ready for analysis."}</p></div>
               <span className={`review-badge ${flaggedRows ? "warning" : "success"}`}>{flaggedRows ? `${flaggedRows} flagged` : "Passed"}</span>
             </header>
 
-            <section className="validation-command" aria-label="Validation summary">
-              <div className="validation-command-stats">
-                <p><span>Status</span><strong className={flaggedRows ? "negative" : "positive"}>{flaggedRows ? "Review" : "Ready"}</strong></p>
-                <p><span>Rows</span><strong>{totalRecords.toLocaleString()}</strong></p>
-                <p><span>Columns</span><strong>{columnCount}</strong></p>
-                <p><span>Errors</span><strong className={flaggedRows ? "negative" : ""}>{flaggedRows.toLocaleString()}</strong></p>
-                <p><span>Date coverage</span><strong>{formatPeriod(startDate, endDate)}</strong></p>
+            <section className="file-validation-overview" ref={reviewCardsRef} aria-label="File validation overview" onAnimationEnd={(event) => { if (event.target === event.currentTarget && event.animationName === "guided-card-focus") setCardsSequenceComplete(true); }}>
+              <div className="file-overview-head">
+                <div><p className="section-number">File validation overview</p><h3>What we found in your file</h3><p>Review the source, usable data, quality checks, and supported reporting before continuing.</p></div>
+                <span className={`review-badge ${flaggedRows ? "warning" : "success"}`}>{flaggedRows ? "Ready with exclusions" : "Ready"}</span>
               </div>
-              <button className="button primary validation-primary-action" type="button" aria-busy={isBuildingReport} disabled={!ready || isBuildingReport} onClick={buildSalesReport}>{isBuildingReport ? "Opening report…" : "Build sales report"}<span aria-hidden="true">→</span></button>
+              <div className="file-overview-facts">
+                <article><div className="file-fact-icon" aria-hidden="true">▤</div><span>Source &amp; usable rows</span><strong>{primaryFile.name ?? files[0]?.name ?? "Uploaded sales data"}</strong><small><b>{validation.validRecords.length.toLocaleString()}</b> rows are ready for reporting. {flaggedRows ? `${countLabel(flaggedRows, "row")} excluded.` : "No rows were excluded."}</small><p className="file-fact-detail"><b>Date coverage</b>{sourceDateCoverage}</p><button type="button" onClick={() => setActiveReviewPanel("source")}>View source details <span aria-hidden="true">→</span></button></article>
+                <article><div className="file-fact-icon" aria-hidden="true">▦</div><span>File structure</span><strong>{columnCount} columns</strong><small><b>{primaryFile.columnNames.filter((column) => CORE_REPORT_COLUMNS.has(column)).length}</b> fields power the report, with {primaryFile.previewRows.length} sample rows available for inspection.</small><p className="file-fact-detail"><b>Control totals</b>{formatCurrency(controlTotals.totalRevenue)} sales · {controlTotals.uniqueOrders.toLocaleString()} orders · {controlTotals.totalUnits.toLocaleString()} units</p><button type="button" onClick={() => setActiveReviewPanel("columns")}>Inspect columns &amp; samples <span aria-hidden="true">→</span></button></article>
+                <article><div className="file-fact-icon" aria-hidden="true">✓</div><span>Data quality</span><strong>{qualityChecks.filter(([, count]) => !count).length} of {qualityChecks.length} checks passed</strong><small>Dates, regions, categories, and duplicate line items were checked.</small><p className={`file-fact-detail${optionalMeasureWarnings ? " has-warning" : ""}`}><b>Warnings</b>{optionalMeasureWarnings ? `${countLabel(optionalMeasureWarnings, "value")} needs review; valid rows remain included.` : "0 — no additional values need review."}</p><button type="button" onClick={() => setActiveReviewPanel("rules")}>Review quality details <span aria-hidden="true">→</span></button></article>
+                <article><div className="file-fact-icon" aria-hidden="true">◎</div><span>Reporting scope</span><strong>6 analyses supported</strong><small>Explore sales trends, comparisons, regions, categories, products, and shipping time.</small><button type="button" onClick={() => setActiveReviewPanel("scope")}>View report scope <span aria-hidden="true">→</span></button></article>
+              </div>
+              <div className="file-overview-actions no-print">
+                <p>Need a copy of the checks and exclusions?</p><button className="validation-log-link" type="button" onClick={downloadValidationResults}>Download validation log <span aria-hidden="true">↓</span></button>
+              </div>
             </section>
 
-            <details className="validation-disclosure source-file-summary">
+            <details className="validation-disclosure source-file-summary legacy-review-disclosure">
               <summary><span>{intakeAnalysis.files.length === 1 ? "Source file" : "Source files"}</span><small>{countLabel(intakeAnalysis.files.length, "file")} · view details</small></summary>
               <ul>{intakeAnalysis.files.map((item, index) => <li key={`${item.name}-summary-${index}`}><span className="source-file-type">{item.type}</span><div><strong>{item.name}</strong><small>{Math.max(1, Math.round(item.size / 1024)).toLocaleString()} KB · {item.startDate ? `${formatPeriod(item.startDate, item.endDate)} coverage` : "No readable date coverage"}</small></div><span className={`source-status ${item.issues ? "flag" : "pass"}`}>{item.issues ? countLabel(item.issues, "issue") : "Ready"}</span></li>)}</ul>
             </details>
 
-            <details className="validation-disclosure dataset-contents">
+            <details className="validation-disclosure dataset-contents legacy-review-disclosure">
               <summary><span>Columns and sample data</span><small>{columnCount} columns · {primaryFile.previewRows.length} preview rows</small></summary>
               <div className="validation-disclosure-body">
               <div className="dataset-contents-head">
@@ -256,7 +312,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
                 {validation.invalidRecords.length > 8 && <p>+ {validation.invalidRecords.length - 8} more issues will be excluded from results.</p>}
               </details>
             ) : null}
-            <div className="validation-detail-grid">
+            <div className="validation-detail-grid legacy-review-disclosure">
               <details className="validation-disclosure quality-checks">
                 <summary><span>Business-rule checks</span><small>{qualityChecks.filter(([, count]) => !count).length}/{qualityChecks.length} passed</small></summary>
                 <div className="validation-disclosure-body">
@@ -281,12 +337,28 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
                 </div>
               </details>
             </div>
+
+            <dialog className="review-detail-dialog" ref={reviewDialogRef} onClose={() => setActiveReviewPanel("")}>
+              <div className="review-dialog-head">
+                <div><p className="section-number">Validation detail</p><h3>{activeReviewPanel === "source" ? "Source files" : activeReviewPanel === "columns" ? "Columns and sample data" : activeReviewPanel === "rules" ? "Business-rule checks" : "Reporting scope"}</h3></div>
+                <button type="button" aria-label="Close validation detail" onClick={() => setActiveReviewPanel("")}>×</button>
+              </div>
+              <div className="review-dialog-body">
+                {activeReviewPanel === "source" && <ul className="dialog-source-list">{intakeAnalysis.files.map((item, index) => <li key={`${item.name}-dialog-${index}`}><span className="source-file-type">{item.type}</span><div><strong>{item.name}</strong><small>{Math.max(1, Math.round(item.size / 1024)).toLocaleString()} KB · {item.startDate ? formatPeriod(item.startDate, item.endDate) : "No readable date coverage"}</small></div><span className={`source-status ${item.issues ? "flag" : "pass"}`}>{item.issues ? countLabel(item.issues, "issue") : "Ready"}</span></li>)}</ul>}
+                {activeReviewPanel === "columns" && <><p className="audit-explainer">Core fields power the report; supporting fields provide identifiers, geography, and shipping detail.</p><div className="table-wrap dialog-table"><table><thead><tr><th>Column</th><th>Use</th><th>Coverage</th><th>Example</th></tr></thead><tbody>{primaryFile.columnNames.map((column, index) => { const profile = primaryFile.columnProfiles?.[index] ?? { populated: 0, total: totalRecords, invalid: 0 }; return <tr key={`${column}-dialog-${index}`}><td><strong>{column}</strong><small>{COLUMN_DETAILS[column] ?? "Additional source value"}</small></td><td><span className={`column-use ${CORE_REPORT_COLUMNS.has(column) ? "core" : "supporting"}`}>{CORE_REPORT_COLUMNS.has(column) ? "Core" : "Supporting"}</span></td><td>{profile.populated.toLocaleString()} / {profile.total.toLocaleString()}</td><td>{primaryFile.previewRows[0]?.[index] || "—"}</td></tr>; })}</tbody></table></div></>}
+                {activeReviewPanel === "rules" && <><ul className="dialog-check-list">{qualityChecks.map(([label, count, detail]) => <li key={`${label}-dialog`}><span className={count ? "flag" : "pass"}>{count ? "!" : "✓"}</span><div><strong>{label}</strong><small>{detail}</small></div></li>)}</ul><div className="dialog-warning-grid"><p><strong>{unprofitableRows.toLocaleString()}</strong> unprofitable line items</p><p><strong>{highDiscountRows.toLocaleString()}</strong> items discounted 40%+</p><p><strong>{optionalMeasureWarnings.toLocaleString()}</strong> optional-value warnings</p></div></>}
+                {activeReviewPanel === "scope" && <div className="reporting-scope-grid dialog-scope-grid"><div className="reporting-readiness"><h4><span aria-hidden="true">✓</span> Supported</h4><ul>{["Weekly and monthly sales", "Prior-period comparisons", "Region and category performance", "Product and segment analysis", "Discount impact on profit", "Order and shipping-time tracking"].map((item) => <li key={`${item}-dialog`}>{item}</li>)}</ul></div><div className="dataset-limitations"><h4><span aria-hidden="true">—</span> Not available</h4><ul>{["Order status, returns, or cancellations", "Inventory and stock levels", "Delivery dates or late-delivery flags", "Promotion or campaign names", "Sales representative ownership", "Issue notes and resolution status"].map((item) => <li key={`${item}-dialog`}>{item}</li>)}</ul></div></div>}
+              </div>
+            </dialog>
           </section>
-        <div className="validation-actions no-print">
-          <p>Replacing the source starts validation again; your current report remains until new files are selected.</p>
-          <button className="button secondary" type="button" onClick={downloadValidationResults}>Download validation results</button>
+        <div className="validation-actions no-print" ref={finalActionRef}>
+          <div className="final-step-copy">
+            <p className="section-number">Final step</p>
+            <h3>Publish the validated report</h3>
+            <p>{ready ? "Validation is complete. Build the report from the valid rows reviewed above." : "Upload at least one file with a readable sales table and valid dated rows to continue."}</p>
+          </div>
+          <button className="button primary validation-primary-action" type="button" aria-busy={isBuildingReport} disabled={!ready || isBuildingReport} onClick={buildSalesReport}>{isBuildingReport ? "Opening report…" : "Build sales report"}<span aria-hidden="true">→</span></button>
         </div>
-        {!ready && <p className="disabled-hint">Upload at least one file with a readable sales table and valid dated rows to continue.</p>}
         {isBuildingReport && <div className="report-build-overlay" role="status"><span>Preparing Marcus’s report…</span></div>}
       </aside>}
     </div>

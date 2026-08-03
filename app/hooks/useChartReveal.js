@@ -1,7 +1,9 @@
 import { useEffect, useRef } from "react";
 
-export default function useChartReveal(active = true) {
+export default function useChartReveal(active = true, options = {}) {
   const ref = useRef(null);
+  const threshold = options.threshold ?? 0.18;
+  const rootMargin = options.rootMargin ?? "0px";
 
   useEffect(() => {
     if (!active) return undefined;
@@ -17,11 +19,11 @@ export default function useChartReveal(active = true) {
       if (!entry.isIntersecting) return;
       element.classList.add("is-visible");
       observer.disconnect();
-    }, { threshold: 0.18 });
+    }, { threshold, rootMargin });
 
     observer.observe(element);
     return () => observer.disconnect();
-  }, [active]);
+  }, [active, rootMargin, threshold]);
 
   return ref;
 }

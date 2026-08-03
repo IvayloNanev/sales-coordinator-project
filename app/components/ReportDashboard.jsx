@@ -10,8 +10,35 @@ import {
   recordsToCsv,
   SalesDataManager,
 } from "../../lib/sales";
+import useChartReveal from "../hooks/useChartReveal";
 
-const MetricCard = ({ label, value, note, featured, trend }) => <article className={`metric-card${featured ? " featured" : ""}`}><span>{label}</span><strong>{value}</strong>{note && <small className={trend ? changeClass(trend.value) : ""}>{note}</small>}</article>;
+const MetricCard = ({ label, value, note, featured, trend, onAnimationEnd }) => <article className={`metric-card${featured ? " featured" : ""}`} onAnimationEnd={onAnimationEnd}><span>{label}</span><strong>{value}</strong>{note && <small className={trend ? changeClass(trend.value) : ""}>{note}</small>}</article>;
+
+function SalesTrend({ days, money }) {
+  if (days.length < 2) return null;
+  const width = 320;
+  const height = 72;
+  const padding = 5;
+  const peak = Math.max(...days.map((day) => day.revenue), 1);
+  const points = days.map((day, index) => {
+    const x = padding + (index / (days.length - 1)) * (width - padding * 2);
+    const y = height - padding - (Math.max(day.revenue, 0) / peak) * (height - padding * 2);
+    return { x, y, ...day };
+  });
+  const pointString = points.map((point) => `${point.x},${point.y}`).join(" ");
+  const areaString = `${padding},${height - padding} ${pointString} ${width - padding},${height - padding}`;
+  const lastPoint = points.at(-1);
+  return (
+    <figure className="insight-trend">
+      <figcaption><span>Daily sales trend</span><b>{money(lastPoint.revenue)} latest</b></figcaption>
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Daily sales trend across ${days.length} active days`}>
+        <polygon points={areaString} className="insight-trend-area" />
+        <polyline points={pointString} pathLength="1" className="insight-trend-line" />
+        <circle cx={lastPoint.x} cy={lastPoint.y} r="3.5" className="insight-trend-point" />
+      </svg>
+    </figure>
+  );
+}
 
 function VisualRanking({ title, eyebrow, rows, labelKey, valueKey = "revenue", valueFormatter, tone = "gold" }) {
   const visibleRows = rows.slice(0, 5);
@@ -37,19 +64,24 @@ function VisualRanking({ title, eyebrow, rows, labelKey, valueKey = "revenue", v
 
 function MixWheel({ rows, total, money }) {
   const palette = ["#6f4c19", "#b18135", "#dfbd70", "#8a7353"];
-  let cursor = 0;
-  const segments = rows.slice(0, 4).map((row, index) => {
+  const compactMoney = (value) => new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(value);
+  const segments = rows.slice(0, 4).reduce((result, row, index) => {
     const share = total ? (row.revenue / total) * 100 : 0;
-    const start = cursor;
-    cursor += share;
-    return { ...row, share, start, end: cursor, color: palette[index] };
-  });
+    const start = result.at(-1)?.end ?? 0;
+    result.push({ ...row, share, start, end: start + share, color: palette[index] });
+    return result;
+  }, []);
   const gradient = segments.map((segment) => `${segment.color} ${segment.start}% ${segment.end}%`).join(", ");
   return (
     <article className="visual-card mix-wheel-card">
       <header><div><span>Portfolio balance</span><h5>Category mix</h5></div><strong>{segments.length}</strong></header>
       <div className="mix-wheel-layout">
-        <div className="mix-wheel" style={{ "--mix-gradient": `conic-gradient(${gradient || "#d7c9aa 0 100%"})` }}><span><strong>{money(total)}</strong><small>Total sales</small></span></div>
+        <div className="mix-wheel" style={{ "--mix-gradient": `conic-gradient(${gradient || "#d7c9aa 0 100%"})` }}><span><strong title={money(total)}>{compactMoney(total)}</strong><small>Total sales</small></span></div>
         <ul>{segments.map((segment) => <li key={segment.productCategory}><i style={{ background: segment.color }} /><span>{segment.productCategory}</span><b>{segment.share.toFixed(1)}%</b></li>)}</ul>
       </div>
     </article>
@@ -86,6 +118,18 @@ const changeLabel = (change) => {
   return `${sign}${change.percentage.toFixed(1)}% vs prior`;
 };
 const changeClass = (value) => value > 0 ? "positive" : value < 0 ? "negative" : "neutral";
+const comparisonLabel = (value, baseline) => {
+  if (!baseline) return value ? "New activity" : "No activity";
+  const percentage = ((value - baseline) / Math.abs(baseline)) * 100;
+  return `${percentage >= 0 ? "+" : ""}${percentage.toFixed(1)}%`;
+};
+const shiftYear = (value, offset) => {
+  const date = new Date(`${value}T00:00:00Z`);
+  const month = date.getUTCMonth();
+  date.setUTCFullYear(date.getUTCFullYear() + offset);
+  if (date.getUTCMonth() !== month) date.setUTCDate(0);
+  return date.toISOString().slice(0, 10);
+};
 const monthTitle = (value) => new Intl.DateTimeFormat("en-US", {
   month: "long",
   year: "numeric",
@@ -215,8 +259,13 @@ export default function ReportDashboard({ records, startDate, endDate, generated
   const [orderQuery, setOrderQuery] = useState("");
   const [resultsUpdating, setResultsUpdating] = useState(false);
   const [visualsVisible, setVisualsVisible] = useState(false);
+  const [metricsSequenceComplete, setMetricsSequenceComplete] = useState(false);
   const reportTitleRef = useRef(null);
   const visualsRef = useRef(null);
+  const briefingRevealRef = useChartReveal(true, { threshold: 0.06, rootMargin: "0px 0px 24% 0px" });
+  const metricsRevealRef = useChartReveal(true, { threshold: 0.06, rootMargin: "0px 0px 24% 0px" });
+  const managerSummaryRevealRef = useChartReveal(metricsSequenceComplete, { threshold: 0.05, rootMargin: "0px 0px 22% 0px" });
+  const actionableInsightsRevealRef = useChartReveal(true, { threshold: 0.12, rootMargin: "0px 0px 12% 0px" });
   const tabRefs = useRef([]);
   const hasMountedResults = useRef(false);
   const completedDefault = previousCompletedWeek(endDate);
@@ -245,6 +294,16 @@ export default function ReportDashboard({ records, startDate, endDate, generated
     endDate: priorRange.endDate,
   }) : [], [manager, filters, priorRange]);
   const priorReport = useMemo(() => calculateReport(priorRecords), [priorRecords]);
+  const yearAgoRange = useMemo(() => ({
+    startDate: shiftYear(filters.startDate, -1),
+    endDate: shiftYear(filters.endDate, -1),
+  }), [filters.startDate, filters.endDate]);
+  const yearAgoRecords = useMemo(() => manager.filterData({
+    ...filters,
+    startDate: yearAgoRange.startDate,
+    endDate: yearAgoRange.endDate,
+  }), [manager, filters, yearAgoRange]);
+  const yearAgoReport = useMemo(() => calculateReport(yearAgoRecords), [yearAgoRecords]);
   const changes = useMemo(() => performanceChange(report, priorReport), [report, priorReport]);
   const categoryDrivers = useMemo(() => comparisonDrivers(currentRecords, priorRecords, "productCategory"), [currentRecords, priorRecords]);
   const regionDrivers = useMemo(() => comparisonDrivers(currentRecords, priorRecords, "salesRegion"), [currentRecords, priorRecords]);
@@ -285,6 +344,24 @@ export default function ReportDashboard({ records, startDate, endDate, generated
       .filter((product) => Number.isFinite(product.averageDiscount) && product.averageDiscount > 0)
       .sort((a, b) => b.averageDiscount - a.averageDiscount || (a.profit ?? 0) - (b.profit ?? 0))
       .slice(0, 5),
+    [report.products],
+  );
+  const atRiskCustomers = useMemo(() => {
+    const currentCustomerNames = new Set(report.customers.map((customer) => customer.customerName.trim().toLowerCase()));
+    return priorReport.customers
+      .filter((customer) => !currentCustomerNames.has(customer.customerName.trim().toLowerCase()))
+      .sort((a, b) => b.revenue - a.revenue);
+  }, [report.customers, priorReport.customers]);
+  const unprofitableCustomers = useMemo(
+    () => report.customers
+      .filter((customer) => Number.isFinite(customer.profit) && customer.profit < 0)
+      .sort((a, b) => a.profit - b.profit),
+    [report.customers],
+  );
+  const unprofitableProducts = useMemo(
+    () => report.products
+      .filter((product) => Number.isFinite(product.profit) && product.profit < 0)
+      .sort((a, b) => a.profit - b.profit),
     [report.products],
   );
   const visibleOrders = useMemo(() => {
@@ -337,8 +414,8 @@ export default function ReportDashboard({ records, startDate, endDate, generated
     const section = visualsRef.current;
     if (!section) return undefined;
     if (!("IntersectionObserver" in window)) {
-      setVisualsVisible(true);
-      return undefined;
+      const timer = window.setTimeout(() => setVisualsVisible(true), 0);
+      return () => window.clearTimeout(timer);
     }
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
@@ -408,10 +485,10 @@ export default function ReportDashboard({ records, startDate, endDate, generated
       <section className="report-filter-panel no-print" aria-label="Report filters">
         <GoldDateInput id="report-start" label="From" min={startDate} max={filters.endDate} value={filters.startDate} onChange={(value) => updateFilter("startDate", value)} />
         <GoldDateInput id="report-end" label="To" min={filters.startDate} max={endDate} value={filters.endDate} onChange={(value) => updateFilter("endDate", value)} />
-        <div><label htmlFor="report-region">Region</label><select id="report-region" value={filters.region} onChange={(event) => updateFilter("region", event.target.value)}><option value="">All regions</option>{options.regions.map((option) => <option key={option}>{option}</option>)}</select></div>
-        <div><label htmlFor="report-category">Category</label><select id="report-category" value={filters.category} onChange={(event) => updateFilter("category", event.target.value)}><option value="">All categories</option>{options.categories.map((option) => <option key={option}>{option}</option>)}</select></div>
-        <div><label htmlFor="report-segment">Segment</label><select id="report-segment" value={filters.segment} onChange={(event) => updateFilter("segment", event.target.value)}><option value="">All segments</option>{options.segments.map((option) => <option key={option}>{option}</option>)}</select></div>
-        <button type="button" disabled={!filtersDirty} onClick={resetFilters}>Reset filters</button>
+        <div className="report-filter-field"><label htmlFor="report-region">Region</label><select id="report-region" value={filters.region} onChange={(event) => updateFilter("region", event.target.value)}><option value="">All regions</option>{options.regions.map((option) => <option key={option}>{option}</option>)}</select></div>
+        <div className="report-filter-field"><label htmlFor="report-category">Category</label><select id="report-category" value={filters.category} onChange={(event) => updateFilter("category", event.target.value)}><option value="">All categories</option>{options.categories.map((option) => <option key={option}>{option}</option>)}</select></div>
+        <div className="report-filter-field"><label htmlFor="report-segment">Segment</label><select id="report-segment" value={filters.segment} onChange={(event) => updateFilter("segment", event.target.value)}><option value="">All segments</option>{options.segments.map((option) => <option key={option}>{option}</option>)}</select></div>
+        <div className="filter-reset-field"><span>Actions</span><button type="button" disabled={!filtersDirty} onClick={resetFilters}>Reset filters</button></div>
         <div className="period-presets" aria-label="Quick reporting periods">
           <span>Quick periods</span>
           <button type="button" aria-pressed={activePeriod === "week"} onClick={() => applyPeriod("week")}>Previous completed week</button>
@@ -423,43 +500,45 @@ export default function ReportDashboard({ records, startDate, endDate, generated
       </section>
 
       <div className={`report-results${resultsUpdating ? " is-updating" : ""}`}>
-      <section className="monday-briefing" aria-labelledby="monday-briefing-title">
-        <div className="briefing-heading"><div><p className="eyebrow">Marcus’s Monday priorities</p><h4 id="monday-briefing-title">Monday briefing</h4></div><span>Sales totals, period movement, and margin risk</span></div>
+      <section className="monday-briefing" ref={briefingRevealRef} aria-labelledby="monday-briefing-title">
+        <div className="briefing-heading"><div><h4 id="monday-briefing-title">Monday briefing</h4></div><span>Sales totals, period movement, and margin risk</span></div>
         <div className="briefing-grid">
           <section className="analysis-panel" aria-labelledby="category-briefing-title">
             <div className="card-heading"><h5 id="category-briefing-title">Sales by category</h5><span>vs prior period</span></div>
-            <div className="compact-analysis-table"><table><thead><tr><th>Category</th><th>Sales</th><th>Change</th></tr></thead><tbody>{report.categories.map((category) => {
+            <div className="briefing-ranking">{report.categories.map((category, index) => {
               const change = categoryChanges.get(category.productCategory) ?? 0;
-              return <tr key={category.productCategory}><td>{category.productCategory}</td><td>{money(category.revenue)}</td><td className={changeClass(change)}>{change > 0 ? "+" : ""}{money(change)}</td></tr>;
-            })}</tbody></table></div>
+              const maxRevenue = report.categories[0]?.revenue || 1;
+              return <div className="briefing-rank-row" style={{ "--briefing-index": index * 3 }} key={category.productCategory}><div className="briefing-rank-label"><strong>{category.productCategory}</strong><span>{money(category.revenue)}</span></div><div className="briefing-bar-track"><span style={{ width: `${Math.max(4, (category.revenue / maxRevenue) * 100)}%` }} /></div><small className={changeClass(change)}>{change > 0 ? "▲ " : change < 0 ? "▼ " : "— "}{money(Math.abs(change))}</small></div>;
+            })}</div>
           </section>
 
           <section className="analysis-panel" aria-labelledby="region-briefing-title">
             <div className="card-heading"><h5 id="region-briefing-title">Regions up or down</h5><span>vs prior period</span></div>
-            <div className="compact-analysis-table"><table><thead><tr><th>Region</th><th>Sales</th><th>Change</th></tr></thead><tbody>{report.regions.map((region) => {
+            <div className="briefing-ranking">{report.regions.map((region, index) => {
               const change = regionChanges.get(region.salesRegion) ?? 0;
-              return <tr className={change < 0 ? "risk-row" : ""} key={region.salesRegion}><td>{region.salesRegion}</td><td>{money(region.revenue)}</td><td className={changeClass(change)}>{change > 0 ? "+" : ""}{money(change)}</td></tr>;
-            })}</tbody></table></div>
+              const maxRevenue = report.regions[0]?.revenue || 1;
+              return <div className={`briefing-rank-row${change < 0 ? " is-risk" : ""}`} style={{ "--briefing-index": index * 3 + 1 }} key={region.salesRegion}><div className="briefing-rank-label"><strong>{region.salesRegion}</strong><span>{money(region.revenue)}</span></div><div className="briefing-bar-track"><span style={{ width: `${Math.max(4, (region.revenue / maxRevenue) * 100)}%` }} /></div><small className={changeClass(change)}>{change > 0 ? "▲ " : change < 0 ? "▼ " : "— "}{money(Math.abs(change))}</small></div>;
+            })}</div>
           </section>
 
           <section className="analysis-panel discount-risk-panel" aria-labelledby="discount-risk-title">
             <div className="card-heading"><h5 id="discount-risk-title">Highest-discount products</h5><span>Margin effect</span></div>
-            <div className="compact-analysis-table"><table><thead><tr><th>Product</th><th>Weighted discount</th><th>Profit</th><th>Margin</th></tr></thead><tbody>{highestDiscountProducts.map((product) => <tr className={Number.isFinite(product.profit) && product.profit < 0 ? "risk-row" : ""} key={product.product}><td title={product.product}>{product.product}</td><td>{(product.averageDiscount * 100).toFixed(1)}%</td><td className={changeClass(product.profit)}>{Number.isFinite(product.profit) ? money(product.profit) : "Unavailable"}</td><td className={changeClass(product.profitMargin)}>{Number.isFinite(product.profitMargin) ? `${product.profitMargin.toFixed(1)}%` : "Unavailable"}</td></tr>)}</tbody></table></div>
+            <div className="discount-risk-list">{highestDiscountProducts.map((product, index) => <div className={`discount-risk-row${Number.isFinite(product.profit) && product.profit < 0 ? " is-risk" : ""}`} style={{ "--briefing-index": index * 3 + 2 }} key={product.product}><span className="risk-rank">{index + 1}</span><div><strong title={product.product}>{product.product}</strong><span>{(product.averageDiscount * 100).toFixed(1)}% weighted discount</span></div><p><strong className={changeClass(product.profit)}>{Number.isFinite(product.profit) ? money(product.profit) : "Unavailable"}</strong><small>{Number.isFinite(product.profitMargin) ? `${product.profitMargin.toFixed(1)}% margin` : "Margin unavailable"}</small></p></div>)}</div>
             {!highestDiscountProducts.length && <p className="briefing-empty">{report.discountAvailability === "available" ? "No discounted products appear in this period." : "Discount data unavailable or incomplete."}</p>}
           </section>
         </div>
       </section>
 
-      <div className="metric-grid metric-grid-expanded">
+      <div className="metric-grid metric-grid-expanded" ref={metricsRevealRef}>
         <MetricCard featured label="Sales" value={money(report.totalRevenue)} note={changeLabel(changes.revenue)} trend={changes.revenue} />
         <MetricCard featured label="Profit" value={report.profitAvailability === "available" ? money(report.totalProfit) : "Unavailable"} note={report.profitAvailability === "available" ? `${changeLabel(changes.profit)} · ${report.profitMargin.toFixed(1)}% margin` : report.profitAvailability === "partial" ? "Partial profit data; analysis withheld" : "Profit column not supplied"} trend={report.profitAvailability === "available" ? changes.profit : null} />
         <MetricCard label="Weighted discount" value={report.discountAvailability === "available" ? `${(report.averageDiscount * 100).toFixed(1)}%` : "Unavailable"} note={report.discountAvailability === "available" ? "Weighted by visible sales" : report.discountAvailability === "partial" ? "Partial discount data" : "Discount column not supplied"} />
         <MetricCard label="Orders" value={report.uniqueOrders.toLocaleString()} note={changeLabel(changes.orders)} trend={changes.orders} />
         <MetricCard label="Units sold" value={report.totalUnits.toLocaleString()} note={changeLabel(changes.units)} trend={changes.units} />
-        <MetricCard label="Average order" value={money(report.averageOrderValue)} note={`Median ${money(report.medianOrderValue)}`} />
+        <MetricCard label="Average order" value={money(report.averageOrderValue)} note={`Median ${money(report.medianOrderValue)}`} onAnimationEnd={(event) => { if (event.target === event.currentTarget && event.animationName === "guided-metric-pulse") setMetricsSequenceComplete(true); }} />
       </div>
 
-      <section className="manager-summary-card" aria-labelledby="manager-summary-title">
+      <section className="manager-summary-card" ref={managerSummaryRevealRef} aria-labelledby="manager-summary-title">
         <div className="manager-summary-label"><span aria-hidden="true">M</span><div><p className="eyebrow">Ready for Monday</p><h4 id="manager-summary-title">Manager summary</h4></div></div>
         <div className="manager-summary-copy">
           <p>{managerSummary}</p>
@@ -473,6 +552,52 @@ export default function ReportDashboard({ records, startDate, endDate, generated
             {regionalCategoryContributors.filter((driver) => driver.revenueChange < 0).slice(0, 2).map((driver) => <li key={`category-${driver.label}`}><span>{driver.label} category</span><b>{money(driver.revenueChange)}</b></li>)}
           </ul>
         </aside> : <aside className="driver-evidence positive-evidence"><span>Regional movement</span><strong>No region declined versus the prior period.</strong></aside>}
+      </section>
+
+      <section className="actionable-insights" ref={actionableInsightsRevealRef} aria-labelledby="actionable-insights-title">
+        <div className="actionable-insights-heading">
+          <div><p className="eyebrow">Recommended follow-up</p><h4 id="actionable-insights-title">Actionable insights</h4></div>
+          <p>Three focused signals for the next manager conversation.</p>
+        </div>
+        <div className="actionable-insights-grid">
+          <article className="insight-card insight-card-risk">
+            <div className="insight-card-topline"><span aria-hidden="true">01</span><p>Customer retention</p></div>
+            <strong>{countLabel(atRiskCustomers.length, "at-risk customer")}</strong>
+            <p>{atRiskCustomers.length ? `${money(atRiskCustomers.reduce((sum, customer) => sum + customer.revenue, 0))} in prior-period sales has not returned.` : "Every prior-period customer returned in the current period."}</p>
+            <details>
+              <summary><span className="details-open-label">{atRiskCustomers.length ? "View customers" : "View status"}</span><span className="details-close-label">Close details</span></summary>
+              {atRiskCustomers.length ? <ul>{atRiskCustomers.slice(0, 5).map((customer) => <li key={customer.customerName}><span>{customer.customerName}</span><b>{money(customer.revenue)}</b></li>)}</ul> : <p className="insight-empty">No customer follow-up is required from this signal.</p>}
+            </details>
+          </article>
+
+          <article className="insight-card insight-card-profit">
+            <div className="insight-card-topline"><span aria-hidden="true">02</span><p>Profit protection</p></div>
+            <strong>{countLabel(unprofitableProducts.length + unprofitableCustomers.length, "profit risk")}</strong>
+            <p>{report.profitAvailability === "available" ? `${countLabel(unprofitableProducts.length, "product")} and ${countLabel(unprofitableCustomers.length, "customer")} are below zero profit.` : "Complete profit data is required to identify margin risks."}</p>
+            <details>
+              <summary><span className="details-open-label">View risks</span><span className="details-close-label">Close details</span></summary>
+              {report.profitAvailability === "available" && (unprofitableProducts.length || unprofitableCustomers.length) ? <>
+                {unprofitableProducts.length > 0 && <div className="insight-detail-group"><span>Products</span><ul>{unprofitableProducts.slice(0, 3).map((product) => <li key={product.product}><span>{product.product}</span><b>{money(product.profit)}</b></li>)}</ul></div>}
+                {unprofitableCustomers.length > 0 && <div className="insight-detail-group"><span>Customers</span><ul>{unprofitableCustomers.slice(0, 3).map((customer) => <li key={customer.customerName}><span>{customer.customerName}</span><b>{money(customer.profit)}</b></li>)}</ul></div>}
+              </> : <p className="insight-empty">{report.profitAvailability === "available" ? "No negative-profit customers or products were found." : "Profit analysis is unavailable for this file."}</p>}
+            </details>
+          </article>
+
+          <article className="insight-card insight-card-year">
+            <div className="insight-card-topline"><span aria-hidden="true">03</span><p>Year-over-year</p></div>
+            <strong className={changeClass(report.totalRevenue - yearAgoReport.totalRevenue)}>{comparisonLabel(report.totalRevenue, yearAgoReport.totalRevenue)} sales</strong>
+            <p>{yearAgoRecords.length ? `Compared with ${shortDate(yearAgoRange.startDate)}–${shortDate(yearAgoRange.endDate)}.` : "No matching activity was found for the same period last year."}</p>
+            <SalesTrend days={report.daily} money={money} />
+            <details>
+              <summary><span className="details-open-label">View comparison</span><span className="details-close-label">Close details</span></summary>
+              <dl className="insight-comparison">
+                <div><dt>Sales</dt><dd>{money(report.totalRevenue)} <span>{comparisonLabel(report.totalRevenue, yearAgoReport.totalRevenue)}</span></dd></div>
+                <div><dt>Orders</dt><dd>{report.uniqueOrders.toLocaleString()} <span>{comparisonLabel(report.uniqueOrders, yearAgoReport.uniqueOrders)}</span></dd></div>
+                <div><dt>Profit</dt><dd>{report.totalProfit === null ? "Unavailable" : money(report.totalProfit)} <span>{report.totalProfit === null || yearAgoReport.totalProfit === null ? "—" : comparisonLabel(report.totalProfit, yearAgoReport.totalProfit)}</span></dd></div>
+              </dl>
+            </details>
+          </article>
+        </div>
       </section>
 
       <section className="breakdown-card discount-impact-summary" aria-labelledby="discount-impact-title">
@@ -492,11 +617,10 @@ export default function ReportDashboard({ records, startDate, endDate, generated
           <MixWheel rows={report.categories} total={report.totalRevenue} money={money} />
         </div>
       </section>
-
       <section className="breakdown-card expanded-breakdown">
         <div className="breakdown-head"><div><h4>Detail</h4><small>Review performance or trace an individual order.</small></div><div className="tabs" role="tablist" aria-label="Report breakdown">{Object.entries(views).map(([key, item], index) => <button id={`report-tab-${key}`} ref={(element) => { tabRefs.current[index] = element; }} type="button" role="tab" aria-controls={`report-panel-${key}`} aria-selected={view === key} tabIndex={view === key ? 0 : -1} className={view === key ? "active" : ""} onKeyDown={(event) => handleTabKeyDown(event, index)} onClick={() => setView(key)} key={key}>{item.label}</button>)}</div></div>
         {view === "orders" && <div className="order-search no-print"><label htmlFor="order-search">Find an order or customer</label><input id="order-search" type="search" value={orderQuery} onChange={(event) => setOrderQuery(event.target.value)} placeholder="Search order ID, customer ID or name, product, or region" /><span>{countLabel(visibleOrders.length, "matching order")}</span></div>}
-        <div id={`report-panel-${view}`} role="tabpanel" aria-labelledby={`report-tab-${view}`} tabIndex="0"><DataTable rows={views[view].rows} columns={views[view].columns} label={views[view].label} /></div>
+        <div id={`report-panel-${view}`} className={view === "orders" ? "orders-panel" : undefined} role="tabpanel" aria-labelledby={`report-tab-${view}`} tabIndex="0"><DataTable rows={views[view].rows} columns={views[view].columns} label={views[view].label} /></div>
       </section>
       </div>
 
