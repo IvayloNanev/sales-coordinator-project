@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import useChartReveal from "../hooks/useChartReveal";
+import { calculateReport, formatCurrency } from "../../lib/sales";
 
 const formatPeriod = (startDate, endDate) => {
   if (!startDate || !endDate) return "Waiting for valid dates";
@@ -74,7 +75,7 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   const periodReady = Boolean(startDate && endDate && startDate <= endDate);
   const validationReady = Boolean(validation && validation.validRecords.length);
   const ready = filesReady && periodReady && validationReady && !isValidating;
-  const records = validation?.validRecords ?? [];
+  const records = useMemo(() => validation?.validRecords ?? [], [validation]);
   const isSalesScopeImport = records.length > 0 && records.every((record) => record.sourceProfile === "SalesScope");
   const primaryFile = intakeAnalysis.files[0] ?? { columnNames: [], previewRows: [] };
   const columnCount = Math.max(0, ...intakeAnalysis.files.map((file) => file.columnCount ?? 0));
@@ -87,6 +88,8 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
   const unknownRegions = validation?.dataWarnings?.filter((record) => record.error?.startsWith("Unknown sales region")).length ?? 0;
   const unknownCategories = validation?.dataWarnings?.filter((record) => record.error?.startsWith("Unknown product category")).length ?? 0;
   const optionalMeasureWarnings = validation?.dataWarnings?.length ?? 0;
+  const controlTotals = useMemo(() => calculateReport(records), [records]);
+  const sourceDateCoverage = formatPeriod(primaryFile.startDate ?? startDate, primaryFile.endDate ?? endDate);
   const qualityChecks = [
     ["Order and ship dates", invalidShipDates, invalidShipDates ? `${countLabel(invalidShipDates, "row")} has a ship date before its order date` : "No ship dates occur before order dates"],
     ["Regions", unknownRegions, unknownRegions ? `${countLabel(unknownRegions, "unknown value")} excluded` : `${validation?.normalizedRegions ?? 0} aliases normalized to HomePlus regions`],
@@ -261,41 +264,20 @@ export default function ReportSetup({ startDate, endDate, files, validation, tot
               <span className={`review-badge ${flaggedRows ? "warning" : "success"}`}>{flaggedRows ? `${flaggedRows} flagged` : "Passed"}</span>
             </header>
 
-            <section className="validation-command" aria-label="Validation summary">
-              <div className="validation-command-stats">
-                <p><span>Validated rows</span><strong className="positive">{validation.validRecords.length.toLocaleString()}</strong></p>
-                <p><span>Excluded rows</span><strong className={flaggedRows ? "negative" : ""}>{flaggedRows.toLocaleString()}</strong></p>
-                <p><span>Rule checks</span><strong>{qualityChecks.filter(([, count]) => !count).length} of {qualityChecks.length} passed</strong></p>
-                <p><span>Report status</span><strong className={flaggedRows ? "negative" : "positive"}>{flaggedRows ? "Ready with exclusions" : "Ready"}</strong></p>
+            <section className="file-validation-overview" ref={reviewCardsRef} aria-label="File validation overview" onAnimationEnd={(event) => { if (event.target === event.currentTarget && event.animationName === "guided-card-focus") setCardsSequenceComplete(true); }}>
+              <div className="file-overview-head">
+                <div><p className="section-number">File validation overview</p><h3>What we found in your file</h3><p>Review the source, usable data, quality checks, and supported reporting before continuing.</p></div>
+                <span className={`review-badge ${flaggedRows ? "warning" : "success"}`}>{flaggedRows ? "Ready with exclusions" : "Ready"}</span>
               </div>
-              <button className="button secondary compact-button validation-download-action no-print" type="button" onClick={downloadValidationResults}>Download validation log</button>
-            </section>
-
-            <section className="review-overview-grid" ref={reviewCardsRef} aria-label="Validation review areas">
-              <article className="review-overview-card source-card">
-                <span className="review-card-icon" aria-hidden="true">▤</span>
-                <div><p className="section-number">Source</p><h3>{countLabel(intakeAnalysis.files.length, "file")} received</h3><p>{primaryFile.name ?? files[0]?.name ?? "Uploaded sales data"}</p></div>
-                <span className="review-card-status pass">Ready</span>
-                <button type="button" onClick={() => setActiveReviewPanel("source")}>View source details<span aria-hidden="true">→</span></button>
-              </article>
-              <article className="review-overview-card columns-card">
-                <span className="review-card-icon" aria-hidden="true">▦</span>
-                <div><p className="section-number">Data shape</p><h3>{columnCount} columns</h3><p>{primaryFile.previewRows.length} preview rows available for inspection.</p></div>
-                <span className="review-card-status">{primaryFile.columnNames.filter((column) => CORE_REPORT_COLUMNS.has(column)).length} report fields</span>
-                <button type="button" onClick={() => setActiveReviewPanel("columns")}>Inspect columns<span aria-hidden="true">→</span></button>
-              </article>
-              <article className="review-overview-card rules-card">
-                <span className="review-card-icon" aria-hidden="true">✓</span>
-                <div><p className="section-number">Quality</p><h3>{qualityChecks.filter(([, count]) => !count).length} of {qualityChecks.length} checks passed</h3><p>{flaggedRows ? `${countLabel(flaggedRows, "row")} excluded from reporting.` : "No structural issues found."}</p></div>
-                <span className={`review-card-status ${flaggedRows ? "flag" : "pass"}`}>{flaggedRows ? "Review" : "All clear"}</span>
-                <button type="button" onClick={() => setActiveReviewPanel("rules")}>Review checks<span aria-hidden="true">→</span></button>
-              </article>
-              <article className="review-overview-card scope-card" onAnimationEnd={(event) => { if (event.target === event.currentTarget && event.animationName === "guided-card-focus") setCardsSequenceComplete(true); }}>
-                <span className="review-card-icon" aria-hidden="true">◎</span>
-                <div><p className="section-number">Reporting scope</p><h3>6 analyses supported</h3><p>See what this source can answer—and what it cannot.</p></div>
-                <span className="review-card-status">Defined</span>
-                <button type="button" onClick={() => setActiveReviewPanel("scope")}>View report scope<span aria-hidden="true">→</span></button>
-              </article>
+              <div className="file-overview-facts">
+                <article><div className="file-fact-icon" aria-hidden="true">▤</div><span>Source &amp; usable rows</span><strong>{primaryFile.name ?? files[0]?.name ?? "Uploaded sales data"}</strong><small><b>{validation.validRecords.length.toLocaleString()}</b> rows are ready for reporting. {flaggedRows ? `${countLabel(flaggedRows, "row")} excluded.` : "No rows were excluded."}</small><p className="file-fact-detail"><b>Date coverage</b>{sourceDateCoverage}</p><button type="button" onClick={() => setActiveReviewPanel("source")}>View source details <span aria-hidden="true">→</span></button></article>
+                <article><div className="file-fact-icon" aria-hidden="true">▦</div><span>File structure</span><strong>{columnCount} columns</strong><small><b>{primaryFile.columnNames.filter((column) => CORE_REPORT_COLUMNS.has(column)).length}</b> fields power the report, with {primaryFile.previewRows.length} sample rows available for inspection.</small><p className="file-fact-detail"><b>Control totals</b>{formatCurrency(controlTotals.totalRevenue)} sales · {controlTotals.uniqueOrders.toLocaleString()} orders · {controlTotals.totalUnits.toLocaleString()} units</p><button type="button" onClick={() => setActiveReviewPanel("columns")}>Inspect columns &amp; samples <span aria-hidden="true">→</span></button></article>
+                <article><div className="file-fact-icon" aria-hidden="true">✓</div><span>Data quality</span><strong>{qualityChecks.filter(([, count]) => !count).length} of {qualityChecks.length} checks passed</strong><small>Dates, regions, categories, and duplicate line items were checked.</small><p className={`file-fact-detail${optionalMeasureWarnings ? " has-warning" : ""}`}><b>Warnings</b>{optionalMeasureWarnings ? `${countLabel(optionalMeasureWarnings, "value")} needs review; valid rows remain included.` : "0 — no additional values need review."}</p><button type="button" onClick={() => setActiveReviewPanel("rules")}>Review quality details <span aria-hidden="true">→</span></button></article>
+                <article><div className="file-fact-icon" aria-hidden="true">◎</div><span>Reporting scope</span><strong>6 analyses supported</strong><small>Explore sales trends, comparisons, regions, categories, products, and shipping time.</small><button type="button" onClick={() => setActiveReviewPanel("scope")}>View report scope <span aria-hidden="true">→</span></button></article>
+              </div>
+              <div className="file-overview-actions no-print">
+                <p>Need a copy of the checks and exclusions?</p><button className="validation-log-link" type="button" onClick={downloadValidationResults}>Download validation log <span aria-hidden="true">↓</span></button>
+              </div>
             </section>
 
             <details className="validation-disclosure source-file-summary legacy-review-disclosure">
